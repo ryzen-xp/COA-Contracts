@@ -1,0 +1,11 @@
+kind = "DojoContract"
+class_hash = "0x3fd35cf75385d93ff25b39f3bf42bb6680ceac51d37957dafa3880a419338ba"
+original_class_hash = "0x3fd35cf75385d93ff25b39f3bf42bb6680ceac51d37957dafa3880a419338ba"
+base_class_hash = "0x0"
+abi = "manifests/dev/base/abis/contracts/dojo_starter-mercenary_actions-7e4d1350.json"
+reads = []
+writes = []
+init_calldata = []
+tag = "dojo_starter-mercenary_actions"
+systems = []
+manifest_name = "dojo_starter-mercenary_actions-7e4d1350"

@@ -1,0 +1,10 @@
+# tag = "dojo_starter-actions"
+# writes = [
+#     "dojo_starter-Moves",
+#     "dojo_starter-Position",
+#     "dojo_starter-DirectionsAvailable",
+# ]
+tag = "dojo_starter-mercenary_actions"
+writes = [
+    "dojo_starter-Mercenary",
+]
