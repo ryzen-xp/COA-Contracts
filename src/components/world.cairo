@@ -1,6 +1,7 @@
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+use dojo::world::{WorldStorage, IWorldDispatcher, IWorldDispatcherTrait};
 
 
-type World = IWorldDispatcher;
+// type World = IWorldDispatcher;
+type World = WorldStorage;
 
 
