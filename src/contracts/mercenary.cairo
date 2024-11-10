@@ -2,7 +2,9 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 trait IMercenaryActions<TContractState> {
-    fn mint(self: @TContractState, owner: ContractAddress) -> u128;
+    fn mint(ref self: TContractState, owner: ContractAddress) -> u128;
+//    fn read_and_write(ref self: TContractState, owner: ContractAddress) -> u128;
+//    fn only_read(self: @TContractState, owner: ContractAddress) -> u128;
 }
 
 #[dojo::contract]
@@ -15,7 +17,7 @@ mod mercenary_actions {
 
     #[abi(embed_v0)]
     impl MercenaryActionsImpl of IMercenaryActions<ContractState> {
-        fn mint(self: @ContractState, owner: ContractAddress) -> u128 {
+        fn mint(ref self: ContractState, owner: ContractAddress) -> u128 {
             let mut world = self.world(@"dojo_starter");
 
           
