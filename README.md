@@ -1,42 +1,79 @@
-# Citizen of Arcanis – Game Design Overview
+# Citizen of Arcanis 
 
 ![Citizen of Arcanis Banner](https://drive.google.com/uc?export=view&id=1cdj5-PQYFpt1LNz9va0Bdug3B1OhRs0b)
 
-Welcome to **Citizen of Arcanis**, a fully on-chain MMORPG set in a vast cyberpunk universe where **you control everything** — from the economy to combat and your own survival.
-
+Welcome to **Citizen of Arcanis**, a fully on-chain MMORPG set in a vast cyberpunk universe where players control everything — from the economy to combat and survival. This repository contains the Cairo Backend for the game.
 ---
 
-## 🌐 **Game Overview**
-Imagine a world where **high-tech jungles**, **toxic deserts**, and **ancient ruins** are ready to be explored. But the real thrill lies in the **Black Market**. This is where the brave and bold take the lead, trading rare and powerful items at incredible prices, but beware: great risks come with great rewards. Will you risk your reputation for an advantage or play it safe in the open market?
+## 🌟 How to Contribute
 
-## 💸 **Player-Driven Economy**
-The economy is fully **player-driven**, and over **50% of the profits** go back to the community! Participate in:
-- 🎉 **Epic events** and **loot boxes**.
-- 🗺️ Find **hidden treasures** scattered across the map.
-- 💰 Profit from in-game success: mine resources, craft items, and dominate the market!
+We deeply appreciate your interest in contributing to the Citizen of Arcanis project! Below are the steps to help you get started effectively. Join our contributors' community by connecting with us on [Telegram](https://t.me/+lkaHQ8JwkWIwMTkx).
 
-## 🚀 **Starknet Integration**
-Your $ARCEL tokens are more than just in-game currency:
-- 💎 **Stack tokens** in strategic zones to unlock high-level loot.
-- 💱 Exchange for **Ethereum** to access Starknet’s DeFi applications.
-  
-In this world, you're not just playing; you're creating wealth in a universe that rewards **skill, strategy,** and **risk-taking**.
+### 1. Issue Requests
+To request or address issues:
 
----
+- Explain your background and how you plan to resolve the issue.
+- Provide an estimated timeframe for resolving the issue.
+- For ODHacks, issue requests will only be considered through OnlyDust.
 
-## 🛡️ **Choose Your Path**
-- 🕵️‍♂️ **Bounty Hunter**: Track down elusive targets.
-- 🏴‍☠️ **Pirate**: Loot valuable treasures.
-- 🛒 **Merchant**: Dominate the market.
+### 2. **Cairo Experience**
+We prefer contributors with Cairo experience. If you're a beginner but eager to learn, you're still welcome! In either case:
 
-No matter the role, **Citizen of Arcanis** gives you the power to shape not just the world, but its entire economy. **Strategize** and **rise to the top**!
+- Clearly explain your proposed solution for any issue.
+- Tasks will be assigned to those best suited to resolve them.
 
----
 
-## 🎮 **Stay Connected**
-Follow us for updates and join our community:
-- [Twitter](https://twitter.com/LabsSunset_)
+## 🔧 Getting Started
 
----
+1. Fork the Repository
+Fork the repository to your GitHub account.
+
+2. Clone Your Fork
+Clone the repository locally:
+```bash
+git clone https://github.com/your-username/CitizenOfArcanisBackend.git
+cd CitizenOfArcanisBackend
+   ```
+### 3. Create a New Branch
+Use our branch naming conventions:
+
+| **Type**         | **Naming Convention**      | **Example**            |
+|-------------------|----------------------------|------------------------|
+| Bug fixes         | `bugfix-issue-name`        | `bugfix-login-error`   |
+| New features      | `feat-feature-name`        | `feat-new-marketplace` |
+| Documentation     | `docs-update-description`  | `docs-readme-update`   |
+| Refactoring       | `refactor-description`     | `refactor-ui-cleanup`  |
+
+**Steps to create a branch**:
+1. Use the appropriate naming convention.
+2. Example command:
+   ```bash
+   git checkout -b feat-new-marketplace    ```
+
+## 🔄 Making Changes
+
+### 4. Implement Your Changes
+- Modify the codebase as needed.
+- Test your changes to ensure the game works as expected.
+### 5. Commit Your Changes
+Stage and commit your changes with a descriptive message:
+  ```bash
+  git add .
+  git commit -m "feat: added new cyberpunk map"
+```
+### 6. Push Your Changes
+Push the branch to your fork:
+```bash
+git push origin branch-name
+```
+## 📤 Submitting a Pull Request
+Once you're ready:
+1. Open a Pull Request (PR) to the main repository.
+2. Include: 
+ - A descriptive title (match the issue name).
+ - A detailed explanation of your changes.
+ - References to related issues (if applicable).
+## Maintainers
+<table> <tr> <td align="center"> <img src="Maintainers/Josue.png" width="100px;" alt="Mantenedor: Josué"/> <br /> <a href="https://t.me/Josue1908Cr">Josué</a> <br /> </td> <td align="center"> <img src="Maintainers/Kevin.jpeg" width="100px;" alt="Mantenedor: Kevin"/> <br /> <a href="https://t.me/kevinnzx213">Kevin</a> <br /> </td> </tr> </table> ```
 
 *In Citizen of Arcanis, the world isn’t just yours to explore—it’s yours to control!*
