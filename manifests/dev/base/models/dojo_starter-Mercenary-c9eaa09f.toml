@@ -1,0 +1,27 @@
+kind = "DojoModel"
+class_hash = "0x46f119059d458a3fb18f939cdb267b73e77c172f38b281816f2513747ca6602"
+original_class_hash = "0x46f119059d458a3fb18f939cdb267b73e77c172f38b281816f2513747ca6602"
+abi = "manifests/dev/base/abis/models/dojo_starter-Mercenary-c9eaa09f.json"
+tag = "dojo_starter-Mercenary"
+qualified_path = "dojo_starter::components::mercenary::mercenary"
+manifest_name = "dojo_starter-Mercenary-c9eaa09f"
+
+[[members]]
+name = "id"
+type = "u128"
+key = true
+
+[[members]]
+name = "owner"
+type = "ContractAddress"
+key = true
+
+[[members]]
+name = "traits"
+type = "Traits"
+key = false
+
+[[members]]
+name = "stats"
+type = "Stats"
+key = false

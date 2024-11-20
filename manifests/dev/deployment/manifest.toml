@@ -1,0 +1,65 @@
+[world]
+kind = "WorldContract"
+class_hash = "0x6f4515274ee23404789c3351a77107d0ec07508530119822046600ca6948d6e"
+original_class_hash = "0x6f4515274ee23404789c3351a77107d0ec07508530119822046600ca6948d6e"
+abi = "manifests/dev/deployment/abis/dojo-world.json"
+address = "0x5d475a9221f6cbf1a016b12400a01b9a89935069aecd57e9876fcb2a7bb29da"
+transaction_hash = "0x7a14c0bc82a029b58e91ae4616d7a44056149036e7d535e2f3b6a5945a59efe"
+block_number = 3
+seed = "dojo_starter"
+manifest_name = "dojo-world"
+
+[world.metadata]
+profile_name = "dev"
+rpc_url = "http://localhost:5050/"
+
+[base]
+kind = "Class"
+class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
+original_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
+abi = "manifests/dev/deployment/abis/dojo-base.json"
+tag = "dojo-base"
+manifest_name = "dojo-base"
+
+[[contracts]]
+kind = "DojoContract"
+address = "0xca38fc339fb3a55a27f34e34eed253e98672cc0edac252527138dd3669bb73"
+class_hash = "0x3fd35cf75385d93ff25b39f3bf42bb6680ceac51d37957dafa3880a419338ba"
+original_class_hash = "0x3fd35cf75385d93ff25b39f3bf42bb6680ceac51d37957dafa3880a419338ba"
+base_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
+abi = "manifests/dev/deployment/abis/contracts/dojo_starter-mercenary_actions-7e4d1350.json"
+reads = []
+writes = ["dojo_starter-Mercenary"]
+init_calldata = []
+tag = "dojo_starter-mercenary_actions"
+systems = []
+manifest_name = "dojo_starter-mercenary_actions-7e4d1350"
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0x46f119059d458a3fb18f939cdb267b73e77c172f38b281816f2513747ca6602"
+original_class_hash = "0x46f119059d458a3fb18f939cdb267b73e77c172f38b281816f2513747ca6602"
+abi = "manifests/dev/deployment/abis/models/dojo_starter-Mercenary-c9eaa09f.json"
+tag = "dojo_starter-Mercenary"
+qualified_path = "dojo_starter::components::mercenary::mercenary"
+manifest_name = "dojo_starter-Mercenary-c9eaa09f"
+
+[[models.members]]
+name = "id"
+type = "u128"
+key = true
+
+[[models.members]]
+name = "owner"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "traits"
+type = "Traits"
+key = false
+
+[[models.members]]
+name = "stats"
+type = "Stats"
+key = false
