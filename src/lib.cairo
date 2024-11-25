@@ -18,6 +18,8 @@ mod components {
 
 mod models {
     mod models;
+    mod inventory;
+    mod item;
     mod role;
     mod mission;
     mod npc;
