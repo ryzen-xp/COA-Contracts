@@ -23,6 +23,7 @@ mod models {
     mod role;
     mod mission;
     mod npc;
+    mod faction;
 }
 
 
