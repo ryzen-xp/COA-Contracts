@@ -25,7 +25,7 @@ mod models {
     // mod mission;
     // mod npc;
     mod rare_item_mg;
-     mod  rare_item_inventory ;
+    mod rare_item_inventory ;
 }
 
 
