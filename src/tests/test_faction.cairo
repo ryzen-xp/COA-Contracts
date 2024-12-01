@@ -26,7 +26,14 @@ mod tests {
         let ndef = namespace_def();
         let mut world = spawn_test_world([ndef].span());
 
-        IFactionsWorldTrait::create_faction(ref world);
+        let name = "Mercenaries";
+        let description = "Mercenaries description";
+        let skills = array![
+                        Skill {name: "Rapid Attack", effect: "+20% base damage attack"}, 
+                        Skill {name: "Elusive", effect: "+20% evade for 5 seconds"},
+                    ];
+
+        IFactionsWorldTrait::create_faction(ref world, name, description, skills);
 
         IFactionsWorldTrait::select_faction(
             ref world, 1, caller

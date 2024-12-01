@@ -10,18 +10,13 @@ use dojo::model::{ModelStorage, ModelValueStorage};
 
 #[generate_trait]
 impl FactionsActionsImpl of IFactionsWorldTrait {
-    fn create_faction(ref self: World) -> Faction {
+    fn create_faction(ref self: World, name: ByteArray, description: ByteArray, skills: Array<Skill>) -> Faction {
         let id: u128 = 1;//uuid(self);
-        let name = "Mercenaries";
-        let description = "Mercenaries description";
-        let skills = array![
-                        Skill {name: "Rapid Attack", effect: "+20% base damage attack"}, 
-                        Skill {name: "Elusive", effect: "+20% evade for 5 seconds"},
-                    ];
+        
         let faction = FactionTrait::create_faction(id,
-            name.clone(),
-            description.clone(),
-            skills.clone());
+            name,
+            description,
+            skills);
 
         self.write_model(@faction);
 
