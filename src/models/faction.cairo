@@ -8,7 +8,7 @@ use dojo_starter::models::role::{Role};
 #[dojo::model]
 pub struct Faction {
     #[key]
-    pub id: u32,             
+    pub id: u128,             
     pub name: ByteArray,        
     pub description: ByteArray,  
     pub players: Array<ContractAddress>,
@@ -24,7 +24,7 @@ pub struct Skill {
 #[generate_trait]
 impl FactionImpl of FactionTrait {
     fn create_faction(
-        id: u32,
+        id: u128,
         name: ByteArray,
         description: ByteArray,
         skills: Array<Skill>,
@@ -43,12 +43,12 @@ impl FactionImpl of FactionTrait {
 mod tests {
     use dojo_starter::models::mission::{MissionStatus};
     use dojo_starter::models::role::{Role};
-    use dojo_starter::models::faction::{Faction, create_faction, Skill};
+    use dojo_starter::models::faction::{Faction, FactionTrait, Skill};
     use core::fmt::{Display, Formatter, Error};
 
     #[test]
     fn test_create_faction_function() {
-        let id = 1_u32;
+        let id = 1_u128;
         let name = "Mercenaries";
         let description = "Mercenaries description";
         let skills = array![
@@ -56,7 +56,7 @@ mod tests {
                         Skill {name: "Elusive", effect: "+20% evade for 5 seconds"},
                     ];
 
-        let faction = create_faction(
+        let faction = FactionTrait::create_faction(
             id,
             name.clone(),
             description.clone(),

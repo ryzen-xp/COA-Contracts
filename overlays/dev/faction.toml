@@ -1,0 +1,4 @@
+tag = "dojo_starter-faction_actions"
+writes = [
+    "dojo_starter-Faction",
+]

@@ -1,6 +1,7 @@
 mod systems {
     // mod actions;
     mod mercenary;
+    mod faction;
 }
 
 mod contracts {
@@ -28,6 +29,6 @@ mod models {
 
 
 mod tests {
-    //mod test_world;
     mod test_inflict_damage;
+    mod test_faction;
 }
