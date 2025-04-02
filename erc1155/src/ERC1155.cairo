@@ -47,7 +47,7 @@ mod CitizenArcanisERC1155 {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         NFTMinted: NFTMinted,
-        FTMinted: FTMinted,
+        FTMinted: FTMinted,        
     }
 
     #[derive(Drop, starknet::Event)]
@@ -68,10 +68,10 @@ mod CitizenArcanisERC1155 {
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress, base_uri_: ByteArray) {
         assert(!owner.is_zero(), 'Owner_zero_address');
-        self.ownable.initializer(owner);
         self.erc1155.initializer(base_uri_);
+        self.ownable.initializer(owner);       
     }
-
+ 
 
     #[abi(embed_v0)]
     impl CitizenArcanisERC1155Impl of erc1155::IERC1155::ICitizenArcanisERC1155<ContractState> {
