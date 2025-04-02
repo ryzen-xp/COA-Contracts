@@ -1,0 +1,5 @@
+erc1155_integrationtest::test_contract::test_batch_mint_fail_length_mismatch
+erc1155_integrationtest::test_contract::test_mint_ft_success
+erc1155_integrationtest::test_contract::test_batch_mint_success
+erc1155_integrationtest::test_contract::test_mint_nft_success
+erc1155_integrationtest::test_contract::test_mint_nft_fail_already_owned
