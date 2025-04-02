@@ -3,7 +3,7 @@ use erc1155::IERC1155::{ICitizenArcanisERC1155Dispatcher as IERC1155Dispatcher, 
 use openzeppelin::utils::serde::SerializedAppend;
 use snforge_std::{CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare};
 use erc1155::utils::{
-    CREDITS, CHEST_ARMOR, WEAPON_1, BOOTS, HANDGUN_AMMO, MACHINE_GUN_AMMO, PET_1, VEHICLE,
+    CREDITS, CHEST_ARMOR, WEAPON_1,  HANDGUN_AMMO,  PET_1, 
 };
 
 fn owner() -> ContractAddress {
