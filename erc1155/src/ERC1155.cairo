@@ -131,7 +131,7 @@ mod CitizenArcanisERC1155 {
         ) {
             self.ownable.assert_only_owner();
             assert(!account.is_zero(), 'account_zero_address');
-            assert!(token_ids.len() == values.len(), "length_mismatch");
+            assert(token_ids.len() == values.len(), 'length_mismatch');
 
             self.erc1155.batch_mint_with_acceptance_check(account, token_ids, values, data);
 
