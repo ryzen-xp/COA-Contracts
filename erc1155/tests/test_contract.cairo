@@ -1,10 +1,10 @@
 use starknet::{ContractAddress, contract_address_const};
-use erc1155::IERC1155::{ICitizenArcanisERC1155Dispatcher as IERC1155Dispatcher, ICitizenArcanisERC1155DispatcherTrait};
+use erc1155::IERC1155::{
+    ICitizenArcanisERC1155Dispatcher as IERC1155Dispatcher, ICitizenArcanisERC1155DispatcherTrait,
+};
 use openzeppelin::utils::serde::SerializedAppend;
 use snforge_std::{CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare};
-use erc1155::utils::{
-    CREDITS, CHEST_ARMOR, WEAPON_1,  HANDGUN_AMMO,  PET_1, 
-};
+use erc1155::utils::{CREDITS, CHEST_ARMOR, WEAPON_1, HANDGUN_AMMO, PET_1};
 
 fn owner() -> ContractAddress {
     contract_address_const::<'owner'>()
@@ -40,12 +40,11 @@ fn deploy() -> ContractAddress {
     contract_address
 }
 fn reciver_deploy() -> ContractAddress {
- 
     let contract = declare("MyTokenReceiver").unwrap().contract_class();
-    let mut calldata = array![]; 
+    let mut calldata = array![];
 
     let (contract_address, _) = contract.deploy(@calldata).expect('Contract deployment failed');
-   
+
     contract_address
 }
 
@@ -54,7 +53,6 @@ fn test_mint_nft_success() {
     let reciver_address = reciver_deploy();
     let contract_address = deploy();
     let erc1155_dispatcher = IERC1155Dispatcher { contract_address };
-
 
     cheat_caller_address(contract_address, owner(), CheatSpan::TargetCalls(1));
 

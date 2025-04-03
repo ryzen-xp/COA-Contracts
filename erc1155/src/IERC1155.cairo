@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use core::byte_array::ByteArray; 
+use core::byte_array::ByteArray;
 
 #[starknet::interface]
 pub trait ICitizenArcanisERC1155<TContractState> {
