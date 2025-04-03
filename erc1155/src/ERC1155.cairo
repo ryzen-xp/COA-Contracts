@@ -11,7 +11,7 @@ mod CitizenArcanisERC1155 {
     use openzeppelin::token::erc1155::{ERC1155Component, ERC1155HooksEmptyImpl};
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::access::ownable::{OwnableComponent};
-    use erc1155::utils::{is_nft};
+    use erc1155::utils::{is_nft ,is_FT};
 
 
     component!(path: ERC1155Component, storage: erc1155, event: ERC1155Event);
@@ -149,7 +149,7 @@ mod CitizenArcanisERC1155 {
                                 minter: get_caller_address(), recipient: account, token_id: id,
                             },
                         );
-                } else {
+                } else if is_FT(id) {
                     self
                         .emit(
                             FTMinted {
@@ -170,7 +170,7 @@ mod CitizenArcanisERC1155 {
         ) {
             self.ownable.assert_only_owner();
             assert(amount > 0, 'amount_must_>0');
-            assert(!is_nft(token_id), 'token_id_formate_of_NFT');
+            assert(is_FT(token_id), 'token_id_formate_of_NFT');
 
             let ids = array![token_id].span();
             let values = array![amount].span();

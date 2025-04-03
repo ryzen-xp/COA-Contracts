@@ -34,6 +34,10 @@ pub const PET_2: u256 = u256 { low: 0x0002, high: 0x800000 };
 
 
 pub fn is_nft(token_id: u256) -> bool {
-    token_id.high > 0
+    token_id.high > 0 
+}
+
+pub fn is_FT(token_id : u256)-> bool {
+    token_id.high ==0  && token_id.low > 0
 }
 
