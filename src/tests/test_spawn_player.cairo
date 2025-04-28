@@ -1,22 +1,23 @@
 use dojo::test;
-use starknet::contract_address::ContractAddress;
-
-use dojo::world::WorldStorage;
-use systems::spawn_player::spawn_player;
-use components::player::Player;
+use starknet::ContractAddress;
+use crate::models::player::Player;
+use crate::systems::spawn_player::spawn_player;
 
 #[test]
 fn test_spawn_player() {
-    let world = WorldStorage::default();
-    let address = ContractAddress::from(1);
+    let player_address = ContractAddress::from(1234);
 
-    spawn_player(world, address);
+    // Spawn the player
+    spawn_player(player_address);
 
-    let player = world.get_component::<Player>(address).unwrap();
+    // Fetch the player from storage
+    let player = Player::get(player_address).unwrap();
 
-    assert(player.level == 1, 'Level must be 1');
-    assert(player.hp == 100, 'HP must be 100');
-    assert(player.max_hp == 100, 'Max HP must be 100');
-    assert(player.coins == 0, 'Coins must be 0');
-    assert(player.starks == 0, 'Starks must be 0');
+    assert(player.address == player_address, 'Address mismatch');
+    assert(player.level == 1, 'Level mismatch');
+    assert(player.xp == 0, 'XP mismatch');
+    assert(player.hp == 100, 'HP mismatch');
+    assert(player.max_hp == 100, 'Max HP mismatch');
+    assert(player.coins == 0, 'Coins mismatch');
+    assert(player.starks == 0, 'Starks mismatch');
 }
