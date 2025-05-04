@@ -6,10 +6,11 @@ pub mod components {
 }
 
 pub mod models {
-    pub mod leaderboard;
-    pub mod player;
-    pub mod quest;
-    pub mod healing_item;
+    // pub mod leaderboard;
+    // pub mod player;
+    // pub mod quest;
+    // pub mod healing_item;
+    pub mod health;
 }
 
 pub mod tests {
