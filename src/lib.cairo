@@ -8,6 +8,7 @@ pub mod models {
     pub mod quest;
     pub mod healing_item;
     pub mod inventory;
+    pub mod cooldown;
 }
 
 pub mod tests {}
