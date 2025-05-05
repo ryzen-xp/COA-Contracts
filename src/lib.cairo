@@ -8,10 +8,11 @@ pub mod components {
 }
 
 pub mod models {
-    pub mod leaderboard;
-    pub mod player;
-    pub mod quest;
-    pub mod health;
+    // pub mod leaderboard;
+    // pub mod player;
+    // pub mod quest;
+    // pub mod inventory;
+    pub mod cooldown;
 }
 
 pub mod tests {
