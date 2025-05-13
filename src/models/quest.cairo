@@ -15,14 +15,7 @@ pub struct Quest {
 #[generate_trait]
 pub impl QuestImpl of QuestTrait {
     fn new(id: u32, description: felt252, goal: u32, reward: u32, category: u8) -> Quest {
-        Quest {
-            id,
-            description,
-            goal,
-            reward,
-            category,
-            is_set: true,
-        }
+        Quest { id, description, goal, reward, category, is_set: true }
     }
 
     fn is_completed(self: @Quest, progress: u32) -> bool {
@@ -41,14 +34,7 @@ pub impl QuestAssert of AssertTrait {
 pub impl ZeroableQuestTrait of Zero<Quest> {
     #[inline(always)]
     fn zero() -> Quest {
-        Quest {
-            id: 0,
-            description: 0,
-            goal: 0,
-            reward: 0,
-            category: 0,
-            is_set: false,
-        }
+        Quest { id: 0, description: 0, goal: 0, reward: 0, category: 0, is_set: false }
     }
 
     #[inline(always)]

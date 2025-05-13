@@ -1,4 +1,3 @@
-
 #[derive(Drop, Serde, Clone)]
 #[dojo::model]
 pub struct Health {
@@ -21,10 +20,9 @@ pub impl HealthImpl of HealthTrait {
 
 #[generate_trait]
 pub impl HealthSystem of HealthSystemTrait {
-    
-    fn apply_damage( mut self : Health ,  amount: u16)-> Health {
+    fn apply_damage(mut self: Health, amount: u16) -> Health {
         assert(amount > 0, 'INVALID_DAMAGE');
-        assert(self.max > 0,'ENTITY_NOT_FOUND');
+        assert(self.max > 0, 'ENTITY_NOT_FOUND');
 
         if self.current <= amount {
             self.current = 0;
@@ -43,14 +41,14 @@ mod tests {
     #[test]
     fn test_apply_partial_damage() {
         let mut health = Health { entity_id: 1, current: 100, max: 100 };
-       let health= HealthSystem::apply_damage(health, 30);
+        let health = HealthSystem::apply_damage(health, 30);
         assert(health.current == 70, 'Should reduce HP by 30');
     }
 
     #[test]
     fn test_apply_fatal_damage() {
         let mut health = Health { entity_id: 2, current: 50, max: 100 };
-       let health =  HealthSystem::apply_damage( health,  50);
+        let health = HealthSystem::apply_damage(health, 50);
         assert(health.current == 0, 'HP should 0 after fatal damage');
     }
 
@@ -62,16 +60,16 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected : ('INVALID_DAMAGE', ))]
+    #[should_panic(expected: ('INVALID_DAMAGE',))]
     fn test_zero_damage_panics() {
         let mut health = Health { entity_id: 4, current: 100, max: 100 };
-        HealthSystem::apply_damage(health,0);
+        HealthSystem::apply_damage(health, 0);
     }
 
     #[test]
-    #[should_panic(expected:('ENTITY_NOT_FOUND',))]
+    #[should_panic(expected: ('ENTITY_NOT_FOUND',))]
     fn test_entity_not_found_panics() {
         let mut health = Health { entity_id: 5, current: 0, max: 0 };
-        HealthSystem::apply_damage(health,10);
+        HealthSystem::apply_damage(health, 10);
     }
 }

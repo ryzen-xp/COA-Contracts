@@ -1,11 +1,12 @@
 use starknet::ContractAddress;
 
+/// REFACTOR THIS FILE
 #[derive(Copy, Drop, Serde, Debug)]
 #[dojo::model]
 pub struct InventoryEntry {
     #[key]
     pub player_id: ContractAddress,
-    pub token_id: felt,
+    pub token_id: felt252,
     pub quantity: u32,
 }
 
@@ -24,33 +25,35 @@ pub impl InventoryImpl of InventorySystem {
             return false;
         }
 
-        let sender_inventory = get_inventory_entry(self.player_id, self.token_id);
+        let mut sender_inventory = get_inventory_entry(*self.player_id, *self.token_id);
         sender_inventory.quantity -= quantity;
-        save_inventory_entry(sender_inventory);
+        // save_inventory_entry(sender_inventory);
 
-        let receiver_inventory = get_inventory_entry(receiver_id, self.token_id);
-        receiver_inventory.quantity += quantity;
-        save_inventory_entry(receiver_inventory);
+        // let receiver_inventory = get_inventory_entry(receiver_id, self.token_id);
+        // receiver_inventory.quantity += quantity;
+        // save_inventory_entry(receiver_inventory);
 
         return true;
     }
 }
 
-func get_inventory_entry(player_id: ContractAddress, token_id: felt) -> InventoryEntry {
+fn get_inventory_entry(player_id: ContractAddress, token_id: felt252) -> InventoryEntry {
     let entry = fetch_inventory_from_storage(player_id, token_id);
     
-    if entry.exists() {
-        return entry;
-    } else {
-        return InventoryEntry {
-            player_id: player_id,
-            token_id: token_id,
-            quantity: 0_u32
-        };
-    }
+    // for now
+    // if entry.exists() {
+    //     return entry;
+    // } else {
+    //     return InventoryEntry {
+    //         player_id: player_id,
+    //         token_id: token_id,
+    //         quantity: 0_u32
+    //     };
+    // }
+    entry
 }
 
-func fetch_inventory_from_storage(player_id: ContractAddress, token_id: felt) -> InventoryEntry {
+fn fetch_inventory_from_storage(player_id: ContractAddress, token_id: felt252) -> InventoryEntry {
     return InventoryEntry {
         player_id: player_id,
         token_id: token_id,
@@ -68,7 +71,7 @@ mod tests {
     fn test_transfer_item_valid() {
         let sender_id = contract_address_const::<0x1>();
         let receiver_id = contract_address_const::<0x2>();
-        let token_id = 101_felt;
+        let token_id = 101;
         let quantity = 5_u32;
 
         let sender_entry = InventoryEntry {
@@ -77,14 +80,14 @@ mod tests {
             quantity: 10_u32,
         };
 
-        assert(sender_entry.transfer_item(receiver_id, quantity), "La transferencia válida falló");
+        assert!(sender_entry.transfer_item(receiver_id, quantity), "La transferencia válida falló");
     }
 
     #[test]
     fn test_transfer_item_insufficient_quantity() {
         let sender_id = contract_address_const::<0x1>();
         let receiver_id = contract_address_const::<0x2>();
-        let token_id = 101_felt;
+        let token_id = 101;
         let quantity = 15_u32;
 
         let sender_entry = InventoryEntry {
@@ -93,6 +96,6 @@ mod tests {
             quantity: 10_u32,
         };
 
-        assert(!sender_entry.transfer_item(receiver_id, quantity), "La transferencia inválida pasó inesperadamente");
+        assert!(!sender_entry.transfer_item(receiver_id, quantity), "La transferencia inválida pasó inesperadamente");
     }
 }

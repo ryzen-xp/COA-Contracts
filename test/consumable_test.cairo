@@ -11,7 +11,9 @@ mod TestConsumableSystem {
         let player = contract_address_const::<0x123>();
         // Deploy mock ERC1155 (replace with actual ERC1155 if available)
         let erc1155_address = deploy_mock_erc1155();
-        let consumable_system = deploy_contract(:ConsumableSystem, array![erc1155_address.into()].span());
+        let consumable_system = deploy_contract(
+            :ConsumableSystem, array![erc1155_address.into()].span(),
+        );
         set_contract_address(player);
         set_caller_address(player);
         // Mint tokens

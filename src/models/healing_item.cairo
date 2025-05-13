@@ -6,7 +6,7 @@ pub struct HealingItem {
     #[key]
     pub id: felt252,
     pub name: felt252,
-    pub description: felt252, 
+    pub description: felt252,
     pub effect_strength: u16,
     pub consumable: bool,
 }

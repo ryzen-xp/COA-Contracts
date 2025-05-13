@@ -11,7 +11,7 @@ mod CitizenArcanisERC1155 {
     use openzeppelin::token::erc1155::{ERC1155Component, ERC1155HooksEmptyImpl};
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::access::ownable::{OwnableComponent};
-    use erc1155::utils::{is_nft ,is_FT};
+    use erc1155::utils::{is_nft, is_FT};
 
 
     component!(path: ERC1155Component, storage: erc1155, event: ERC1155Event);

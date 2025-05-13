@@ -30,14 +30,20 @@ mod ConsumableSystem {
     }
 
     #[external(v0)]
-    fn use_consumable(ref self: ContractState, player_id: ContractAddress, token_id: u256, amount: u256) {
+    fn use_consumable(
+        ref self: ContractState, player_id: ContractAddress, token_id: u256, amount: u256,
+    ) {
         assert(amount > 0, 'Amount must be greater than zero');
         assert(get_caller_address() == player_id, 'Only player can use consumables');
         let balance = self.erc1155.balance_of(player_id, token_id);
         assert(balance >= amount, 'Insufficient token balance');
 
         // Burn tokens by transferring to zero address
-        self.erc1155.safe_transfer_from(player_id, contract_address_const::<0>(), token_id, amount, array![].span());
+        self
+            .erc1155
+            .safe_transfer_from(
+                player_id, contract_address_const::<0>(), token_id, amount, array![].span(),
+            );
 
         // Update local inventory if tracked
         let current_inventory = self.local_inventory.read((player_id, token_id));
@@ -50,7 +56,9 @@ mod ConsumableSystem {
     }
 
     #[external(v0)]
-    fn update_inventory(ref self: ContractState, player_id: ContractAddress, token_id: u256, amount: u256) {
+    fn update_inventory(
+        ref self: ContractState, player_id: ContractAddress, token_id: u256, amount: u256,
+    ) {
         // Add access control if needed
         self.local_inventory.write((player_id, token_id), amount);
     }
