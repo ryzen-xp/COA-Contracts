@@ -39,7 +39,7 @@ pub impl InventoryImpl of InventorySystem {
 
 fn get_inventory_entry(player_id: ContractAddress, token_id: felt252) -> InventoryEntry {
     let entry = fetch_inventory_from_storage(player_id, token_id);
-    
+
     // for now
     // if entry.exists() {
     //     return entry;
@@ -54,11 +54,7 @@ fn get_inventory_entry(player_id: ContractAddress, token_id: felt252) -> Invento
 }
 
 fn fetch_inventory_from_storage(player_id: ContractAddress, token_id: felt252) -> InventoryEntry {
-    return InventoryEntry {
-        player_id: player_id,
-        token_id: token_id,
-        quantity: 0_u32
-    };
+    return InventoryEntry { player_id: player_id, token_id: token_id, quantity: 0_u32 };
 }
 
 
@@ -75,12 +71,10 @@ mod tests {
         let quantity = 5_u32;
 
         let sender_entry = InventoryEntry {
-            player_id: sender_id,
-            token_id: token_id,
-            quantity: 10_u32,
+            player_id: sender_id, token_id: token_id, quantity: 10_u32,
         };
 
-        assert!(sender_entry.transfer_item(receiver_id, quantity), "La transferencia válida falló");
+        assert!(sender_entry.transfer_item(receiver_id, quantity), "Not equal");
     }
 
     #[test]
@@ -91,11 +85,9 @@ mod tests {
         let quantity = 15_u32;
 
         let sender_entry = InventoryEntry {
-            player_id: sender_id,
-            token_id: token_id,
-            quantity: 10_u32,
+            player_id: sender_id, token_id: token_id, quantity: 10_u32,
         };
 
-        assert!(!sender_entry.transfer_item(receiver_id, quantity), "La transferencia inválida pasó inesperadamente");
+        assert!(!sender_entry.transfer_item(receiver_id, quantity), "Not equal");
     }
 }
