@@ -9,15 +9,7 @@ mod spawn_player {
     pub fn spawn_player(address: ContractAddress) {
         Player::set(
             address,
-            Player {
-                address: address,
-                level: 1,
-                xp: 0,
-                hp: 100,
-                max_hp: 100,
-                coins: 0,
-                starks: 0,
-            },
+            Player { address: address, level: 1, xp: 0, hp: 100, max_hp: 100, coins: 0, starks: 0 },
         );
     }
 }

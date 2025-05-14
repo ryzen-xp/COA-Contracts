@@ -57,25 +57,23 @@ pub impl PlayerImpl of PlayerTrait {
     }
 
     fn heal_using_item(
-        ref self: Player, 
-        ref inventory_entry: InventoryEntry, 
-        healing_item: HealingItem
+        ref self: Player, ref inventory_entry: InventoryEntry, healing_item: HealingItem,
     ) -> bool {
         // Check if the inventory entry token_id matches the healing item id
         if inventory_entry.token_id != healing_item.id {
             return false;
         }
-        
+
         // Check if player has the item
         if !inventory_entry.has_sufficient_quantity(1) {
             return false;
         }
-        
+
         let healing_amount = healing_item.effect_strength;
         self.heal(healing_amount);
-        
+
         inventory_entry.quantity -= 1;
-        
+
         return true;
     }
 }
@@ -97,15 +95,7 @@ pub impl PlayerAssert of AssertTrait {
 pub impl ZeroablePlayerTrait of Zero<Player> {
     #[inline(always)]
     fn zero() -> Player {
-        Player {
-            address:ZERO_ADDRESS(),
-            level: 0,
-            xp: 0,
-            hp: 0,
-            max_hp: 0,
-            coins: 0,
-            starks: 0,
-        }
+        Player { address: ZERO_ADDRESS(), level: 0, xp: 0, hp: 0, max_hp: 0, coins: 0, starks: 0 }
     }
 
     #[inline(always)]
@@ -121,15 +111,7 @@ pub impl ZeroablePlayerTrait of Zero<Player> {
 
 
 pub fn spawn_player(address: ContractAddress) -> Player {
-    Player {
-        address,
-        level: 1,
-        xp: 0,
-        hp: 100,
-        max_hp: 100,
-        coins: 0,
-        starks: 0,
-    }
+    Player { address, level: 1, xp: 0, hp: 100, max_hp: 100, coins: 0, starks: 0 }
 }
 
 #[cfg(test)]
@@ -143,13 +125,7 @@ mod tests {
         let addr: ContractAddress = contract_address_const::<0x123>();
 
         let player = Player {
-            address: addr,
-            level: 1,
-            xp: 0,
-            hp: 100,
-            max_hp: 100,
-            coins: 0,
-            starks: 0,
+            address: addr, level: 1, xp: 0, hp: 100, max_hp: 100, coins: 0, starks: 0,
         };
 
         assert(player.address == addr, 'Address mismatch');
@@ -169,13 +145,7 @@ mod tests {
         let addr: ContractAddress = contract_address_const::<0xABC>();
 
         let player = Player {
-            address: addr,
-            level: 1,
-            xp: 0,
-            hp: 100,
-            max_hp: 100,
-            coins: 0,
-            starks: 0,
+            address: addr, level: 1, xp: 0, hp: 100, max_hp: 100, coins: 0, starks: 0,
         };
 
         assert(player.is_non_zero(), 'Should be non-zero');
@@ -185,15 +155,9 @@ mod tests {
     fn test_heal_using_item_success() {
         let addr: ContractAddress = contract_address_const::<0x123>();
         let mut player = Player {
-            address: addr,
-            level: 1,
-            xp: 0,
-            hp: 50,
-            max_hp: 100,
-            coins: 0,
-            starks: 0,
+            address: addr, level: 1, xp: 0, hp: 50, max_hp: 100, coins: 0, starks: 0,
         };
-        
+
         let healing_potion = HealingItem {
             id: 1,
             name: 'Health Potion',
@@ -201,36 +165,28 @@ mod tests {
             effect_strength: 30,
             consumable: true,
         };
-        
+
         // Setup inventory with the healing item
         let mut inventory = InventoryEntry {
-            player_id: addr,
-            token_id: healing_potion.id,
-            quantity: 3,
+            player_id: addr, token_id: healing_potion.id, quantity: 3,
         };
-        
+
         // Use the healing item
         let result = player.heal_using_item(ref inventory, healing_potion);
-        
+
         assert(result == true, 'Healing should succeed');
         assert(player.hp == 80, 'HP should be 80 after healing');
         assert(inventory.quantity == 2, 'Item should be consumed');
     }
-    
+
     #[test]
     fn test_heal_using_item_max_hp() {
         // Setup player with almost full health
         let addr: ContractAddress = contract_address_const::<0x123>();
         let mut player = Player {
-            address: addr,
-            level: 1,
-            xp: 0,
-            hp: 90,
-            max_hp: 100,
-            coins: 0,
-            starks: 0,
+            address: addr, level: 1, xp: 0, hp: 90, max_hp: 100, coins: 0, starks: 0,
         };
-        
+
         // Setup healing item with high effect
         let strong_potion = HealingItem {
             id: 2,
@@ -239,36 +195,28 @@ mod tests {
             effect_strength: 50,
             consumable: true,
         };
-        
+
         // Setup inventory with the healing item
         let mut inventory = InventoryEntry {
-            player_id: addr,
-            token_id: strong_potion.id,
-            quantity: 1,
+            player_id: addr, token_id: strong_potion.id, quantity: 1,
         };
-        
+
         // Use the healing item
         let result = player.heal_using_item(ref inventory, strong_potion);
-        
+
         assert(result == true, 'Healing should succeed');
         assert(player.hp == 100, 'HP should cap at max_hp');
         assert(inventory.quantity == 0, 'Item should be consumed');
     }
-    
+
     #[test]
     fn test_heal_using_item_no_item() {
         // Setup player with reduced health
         let addr: ContractAddress = contract_address_const::<0x123>();
         let mut player = Player {
-            address: addr,
-            level: 1,
-            xp: 0,
-            hp: 50,
-            max_hp: 100,
-            coins: 0,
-            starks: 0,
+            address: addr, level: 1, xp: 0, hp: 50, max_hp: 100, coins: 0, starks: 0,
         };
-        
+
         // Setup healing item
         let healing_potion = HealingItem {
             id: 1,
@@ -277,35 +225,27 @@ mod tests {
             effect_strength: 30,
             consumable: true,
         };
-        
+
         // Setup inventory with NO healing items
         let mut inventory = InventoryEntry {
-            player_id: addr,
-            token_id: healing_potion.id,
-            quantity: 0,
+            player_id: addr, token_id: healing_potion.id, quantity: 0,
         };
-        
+
         let result = player.heal_using_item(ref inventory, healing_potion);
-        
+
         assert(result == false, 'Healing should fail');
         assert(player.hp == 50, 'HP should remain unchanged');
         assert(inventory.quantity == 0, 'Inventory should be unchanged');
     }
-    
+
     #[test]
     fn test_heal_using_item_id_mismatch() {
         // Setup player with reduced health
         let addr: ContractAddress = contract_address_const::<0x123>();
         let mut player = Player {
-            address: addr,
-            level: 1,
-            xp: 0,
-            hp: 50,
-            max_hp: 100,
-            coins: 0,
-            starks: 0,
+            address: addr, level: 1, xp: 0, hp: 50, max_hp: 100, coins: 0, starks: 0,
         };
-        
+
         // Setup healing item
         let healing_potion = HealingItem {
             id: 1,
@@ -314,35 +254,25 @@ mod tests {
             effect_strength: 30,
             consumable: true,
         };
-        
+
         // Setup inventory with a DIFFERENT item id than the healing item
-        let mut inventory = InventoryEntry {
-            player_id: addr,
-            token_id: 2,
-            quantity: 5,
-        };
-        
+        let mut inventory = InventoryEntry { player_id: addr, token_id: 2, quantity: 5 };
+
         let result = player.heal_using_item(ref inventory, healing_potion);
-        
+
         assert(result == false, 'Fail on ID mismatch');
         assert(player.hp == 50, 'HP should remain unchanged');
         assert(inventory.quantity == 5, 'Inventory should be unchanged');
     }
-    
+
     #[test]
     fn test_heal_using_different_item_strengths() {
         // Setup player with reduced health
         let addr: ContractAddress = contract_address_const::<0x123>();
         let mut player = Player {
-            address: addr,
-            level: 1,
-            xp: 0,
-            hp: 40,
-            max_hp: 100,
-            coins: 0,
-            starks: 0,
+            address: addr, level: 1, xp: 0, hp: 40, max_hp: 100, coins: 0, starks: 0,
         };
-        
+
         // Setup weak healing item
         let weak_potion = HealingItem {
             id: 1,
@@ -351,19 +281,17 @@ mod tests {
             effect_strength: 10,
             consumable: true,
         };
-        
+
         // Setup inventory with the weak healing item
         let mut inventory_weak = InventoryEntry {
-            player_id: addr,
-            token_id: weak_potion.id,
-            quantity: 1,
+            player_id: addr, token_id: weak_potion.id, quantity: 1,
         };
-        
+
         let result_weak = player.heal_using_item(ref inventory_weak, weak_potion);
-        
+
         assert(result_weak == true, 'Weak healing should succeed');
         assert(player.hp == 50, 'should be 50 after healing');
-        
+
         // Setup strong healing item
         let strong_potion = HealingItem {
             id: 2,
@@ -372,16 +300,14 @@ mod tests {
             effect_strength: 30,
             consumable: true,
         };
-        
+
         // Setup inventory with the strong healing item
         let mut inventory_strong = InventoryEntry {
-            player_id: addr,
-            token_id: strong_potion.id,
-            quantity: 1,
+            player_id: addr, token_id: strong_potion.id, quantity: 1,
         };
-        
+
         let result_strong = player.heal_using_item(ref inventory_strong, strong_potion);
-        
+
         assert(result_strong == true, 'Strong healing should succeed');
         assert(player.hp == 80, 'should be 80 after healing');
     }
