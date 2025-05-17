@@ -1,6 +1,6 @@
 pub mod systems {
-    pub mod consumable;
-    pub mod spawn_player;
+    // pub mod consumable;
+    // pub mod spawn_player;
     pub mod transfer_item;
 }
 
@@ -10,6 +10,10 @@ pub mod components {
     pub mod stats;
     pub mod utils;
     pub mod world;
+}
+
+pub mod erc1155 {
+    pub mod erc1155;
 }
 
 pub mod models {

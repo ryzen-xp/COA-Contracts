@@ -5,9 +5,9 @@ use core::traits::TryInto;
 use starknet::ContractAddress;
 use core::fmt::{Display, Formatter, Error};
 
-use dojo_starter::components::stats::{Stats, StatsTrait};
-use dojo_starter::components::weapon::{Weapon, WEAPON_COUNT};
-use dojo_starter::components::armour::{Armour, ARMOUR_COUNT};
+use crate::components::stats::{Stats, StatsTrait};
+use crate::components::weapon::{Weapon, WEAPON_COUNT};
+use crate::components::armour::{Armour, ARMOUR_COUNT};
 
 //********************************************************************
 //                        DATA STRUCTURES                           ||

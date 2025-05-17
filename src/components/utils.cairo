@@ -25,7 +25,7 @@ fn uuid(world: IWorldDispatcher) -> u128 {
 /// generate a seed.
 ///
 fn seed(salt: ContractAddress) -> felt252 {
-    // 
+    //
     ''
 }
 
@@ -68,16 +68,18 @@ struct Random {
 //         self.seed = pedersen::pedersen(self.seed, self.nonce.into());
 //         self.seed
 //     }
-//     fn next<T, +Into<T, u256>, +Into<u8, T>, +TryInto<u256, T>, +BitNot<T>>(ref self: Random) -> T {
+//     fn next<T, +Into<T, u256>, +Into<u8, T>, +TryInto<u256, T>, +BitNot<T>>(ref self: Random) ->
+//     T {
 //         let seed: u256 = self.next_seed().into();
 //         let mask: T = BitNot::bitnot(0_u8.into());
 //         (mask.into() & seed).try_into().unwrap()
 //     }
-//     fn next_capped<T, +Into<T, u256>, +TryInto<u256, T>, +Drop<T>>(ref self: Random, cap: T) -> T {
+//     fn next_capped<T, +Into<T, u256>, +TryInto<u256, T>, +Drop<T>>(ref self: Random, cap: T) -> T
+//     {
 //         let seed: u256 = self.next_seed().into();
 //         (seed % cap.into()).try_into().unwrap()
 //     }
-}
+// }
 
 //********************************************************************
 //                   UUID GENERATION WITH POSEIDON                   ||

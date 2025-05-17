@@ -7,10 +7,4 @@ use dojo::world::{WorldStorage, IWorldDispatcher, IWorldDispatcherTrait};
 
 // Alias `World` to `WorldStorage` for world state management.
 
-type World = IWorldDispatcher;
-type WorldE = WorldStorage;
 
-
-fn do_something() {
-    let storage = World { contract_address: 0.try_into().unwrap() };
-}
