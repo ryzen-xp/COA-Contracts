@@ -1,7 +1,7 @@
 //********************************************************************
 //                          IMPORTS                                 ||
 //********************************************************************
-use dojo_starter::components::stats::{Stats, StatsTrait};
+use crate::components::stats::{Stats, StatsTrait};
 
 //********************************************************************
 //                             ENUM STRUCTURES                      ||
@@ -13,7 +13,7 @@ const ARMOUR_COUNT: u8 = 1;
 ///'Armour'enum for different armour types.
 ///
 #[derive(Copy, Drop, Serde, Introspect)]
-enum Armour {
+pub enum Armour {
     Shield,
 }
 

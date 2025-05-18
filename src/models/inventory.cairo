@@ -95,6 +95,7 @@ impl PlayerInventoryImpl of PlayerInventoryTrait {
         }
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::PlayerInventoryImpl;

@@ -26,8 +26,8 @@ jobs:
           asdf install scarb 2.9.4
           asdf global scarb 2.9.4
           asdf plugin add dojo https://github.com/dojoengine/asdf-dojo
-          asdf install dojo 1.1.0 
-          asdf global dojo 1.1.0
+          asdf install dojo 1.4.0 
+          asdf global dojo 1.4.0
           asdf plugin add starknet-foundry
           asdf install starknet-foundry 0.35.0
           asdf global starknet-foundry 0.35.0
