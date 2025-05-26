@@ -4,6 +4,8 @@ use crate::models::gear::Gear;
 pub trait IGear<TContractState> {
     fn upgrade(ref self: TContractState, item_id: u256);
     fn equip(ref self: TContractState, item_id: Array<u256>);
+    // unequips an item and equips another item at that slot.
+    fn exchange(ref self: TContractState, in_item_id: u256, out_item_id: u256);
     // to equip an object on another object, if necessary
     // blocked for now.
     fn equip_on(ref self: TContractState, item_id: u256, target: u256);
