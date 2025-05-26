@@ -3,7 +3,7 @@ use crate::helpers::base::ContractAddressDefault;
 use core::num::traits::Zero;
 use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
 use crate::erc1155::erc1155::{IERC1155MintableDispatcher, IERC1155MintableDispatcherTrait};
-use crate::types::player::{PlayerRank, PlayerRankTrait, Beginner, Intermediate};
+use crate::types::player::{PlayerRank, PlayerRankTrait};
 use crate::types::base::{CREDITS};
 use dojo::world::{WorldStorage};
 
@@ -15,17 +15,27 @@ const DEFAULT_MAX_EQUIPPABLE_SLOT: u32 = 10;
 pub struct Player {
     #[key]
     pub id: ContractAddress,
-    hp: u128,
-    max_hp: u128,
-    equipped: Array<u256>,  // equipped from Player Inventory
-    max_equip_slot: u32,
-    rank: PlayerRank,
-    next_rank_in: u64,
+    pub hp: u128,
+    pub max_hp: u128,
+    pub equipped: Array<u256>,  // equipped from Player Inventory
+    pub max_equip_slot: u32,
+    pub rank: PlayerRank,
+    pub level: u256,    // this level is broken down from exps, usuable for boosters
+    pub faction: felt252,
+    pub next_rank_in: u64,
+    pub left_hand: Array<u256>,
+    pub right_hand: Array<u256>,
+    pub left_leg: Array<u256>,
+    pub right_leg: Array<u256>,
+    pub upper_torso: Array<u256>,
+    pub lower_torso: Array<u256>,
+    pub back: u256, // hangables, but it's usually just an item, leave it one for now.
+    pub waist: Array<u256>,     // max len for this field should be 8. (for now).
 }
 
 #[generate_trait]
 pub impl PlayerImpl of PlayerTrait {
-    fn init(ref self: Player) {
+    fn init(ref self: Player, faction: felt252) {
         self.check();
         // does nothing if the player exists
         if self.max_hp == 0 {
@@ -33,7 +43,7 @@ pub impl PlayerImpl of PlayerTrait {
             self.max_hp = DEFAULT_HP;
             self.max_equip_slot = DEFAULT_MAX_EQUIPPABLE_SLOT;
             self.rank = Default::default();
-            self.next_rank_in = self.rank.compute_max_val();
+            self.next_rank_in = self.rank.compute_max_val();    // change this
         }
     }
 
@@ -101,6 +111,12 @@ pub impl PlayerImpl of PlayerTrait {
         // for the attack, the Rank level can serve as a multiplier.
         0
     }
+
+    fn is_equippable(self: @Player, item_id: u256) -> bool {
+
+    }
+
+    fn item
 
     #[inline(always)]
     fn check(self: @Player) {

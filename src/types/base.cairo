@@ -1,3 +1,5 @@
+use dojo::world::WorldStorage;
+
 pub const CREDITS: u256 = 0x1;
 
 pub mod Ammo {
