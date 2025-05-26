@@ -14,6 +14,7 @@ move = "sozo execute dojo_starter-actions move -c 1 --wait"
 
 [dependencies]
 dojo = { git = "https://github.com/dojoengine/dojo.git", tag = "v1.4.0" }
+alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria.git" }
 openzeppelin = "1.0.0"
 
 [tool.dojo.env]
