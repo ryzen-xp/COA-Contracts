@@ -9,8 +9,9 @@ pub trait IGear<TContractState> {
     // to equip an object on another object, if necessary
     // blocked for now.
     fn equip_on(ref self: TContractState, item_id: u256, target: u256);
-    fn refresh(ref self: TContractState);
+    fn refresh(ref self: TContractState);   // might be moved to player. when players transfer off contract, then there's a problem
     fn get_item_details(ref self: TContractState, item_id: u256) -> Gear;   // Some Item Details struct.
+    fn total_held_of(ref self: TContracState, gear_type: GearType) -> u256;
     // use the caller and read the model of both the caller, and the target
     // the target only refers to one target type for now
     // This target type is raidable.
@@ -28,6 +29,7 @@ pub trait IGear<TContractState> {
     fn auction(ref self: TContractState, item_ids: Array<u256>);
     fn dismantle(ref self: TContractState, item_ids: Array<u256>);
     fn transfer(ref self: TContractState, item_ids: Array<u256>);
+    fn grant(ref self: TContractState, asset: GearType)
 
     // These functions might be reserved for players within a specific faction
 

@@ -16,6 +16,10 @@ pub mod models {
     pub mod gear;
 }
 
+pub mod interfaces {
+    pub mod gear;
+}
+
 pub mod helpers {
     pub mod base;
 }
