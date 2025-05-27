@@ -3,8 +3,8 @@ version = 1
 
 [[package]]
 name = "alexandria_math"
-version = "0.5.1"
-source = "git+https://github.com/keep-starknet-strange/alexandria.git#451fe4214d1995be141f1c60d3dd4e6673448d08"
+version = "0.3.0"
+source = "git+https://github.com/keep-starknet-strange/alexandria.git?tag=v0.3.0#e3715428c990665afc495b5428ef08ab9a2089cd"
 
 [[package]]
 name = "coa"

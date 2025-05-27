@@ -7,19 +7,28 @@ use core::num::traits::Zero;
 use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
 use crate::erc1155::erc1155::{IERC1155MintableDispatcher, IERC1155MintableDispatcherTrait};
 use starknet::ContractAddress;
+use dojo::world::WorldStorage;
 
 #[dojo::model]
 #[derive(Drop, Copy, Default, Serde)]
 pub mod Gear {
     #[key]
-    pub id: (u256, ContractAddress),    // the u256 here is the 
+    pub id: u256, 
     pub item_type: felt252,
+    pub asset_id: u256,
     pub variation: // take in an instrospect enum, whether ammo, or companion, etc
     // I don't know if it's variation or not, but the type of that item.
     pub variation_ref: u256,
-    pub total_count: u64,   // for checks
-    pub total_held: u64,    // for stats
+    pub total_count: u64,   // for fungible.
     pub in_action: bool,    // this translates to if this gear is ready to be used... just like a gun in hand, rather than a docked gun. This field would be used in important checks in the future.
+    pub upgrade_level: u64,
+    pub max_upgrade_level
+}
+
+#[derive(Drop, Copy, Serde, PartialEq, Default)]
+pub enum GearType {
+    #[default]
+    None,
 }
 
 // for now, all items would implement this trait
@@ -27,11 +36,7 @@ pub mod Gear {
 
 pub trait GearTrait {
     fn with_id(id: u256) -> Gear;
-    fn is_upgradeable(ref self: Gear) -> {
-
-    }
-
-    fn forge() -> u256 {
-
-    }
+    fn is_upgradeable(ref self: Gear) -> bool;
+    fn forge(items: Array<u256>) -> u256; // can only be implemented on specific ids. Might invoke the worldstorage if necessary.
+    fn is_fungible(id: u256);
 }

@@ -1,5 +1,6 @@
 use starknet::ContractAddress;
 use core::num::traits::Zero;
+use dojo::storage::WorldStorage;
 
 pub impl ContractAddressDefault of Default<ContractAddress> {
     #[inline(always)]
@@ -8,8 +9,7 @@ pub impl ContractAddressDefault of Default<ContractAddress> {
     }
 }
 
-fn generate_id(target: felt252, storage: WorldStorage) -> u256 {
-    let mut world = self.world_default();
+fn generate_id(target: felt252, world: WorldStorage) -> u256 {
     let mut game_id: Id = world.read_model(target);
     let mut id = game_id.nonce + 1;
     game_id.nonce = id;
