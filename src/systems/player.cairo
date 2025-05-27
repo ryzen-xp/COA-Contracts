@@ -64,10 +64,10 @@ pub mod PlayerActions {
         // or recieve damage should probably be an internal trait for now.
         }
 
-        fn get_player(self: @TContractState, player_id: u256) -> Player {
+        fn get_player(self: @ContractState, player_id: u256) -> Player {
             Default::default()
         }
-        fn register_guild(ref self: TContractState) {}
+        fn register_guild(ref self: ContractState) {}
     }
 
     #[generate_trait]

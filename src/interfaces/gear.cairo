@@ -2,7 +2,7 @@ use crate::models::gear::{Gear, GearType, GearProperties};
 
 #[starknet::interface]
 pub trait IGear<TContractState> {
-    fn upgrade(ref self: TContractState, item_id: u256);
+    fn upgrade_gear(ref self: TContractState, item_id: u256);
     fn equip(ref self: TContractState, item_id: Array<u256>);
     // unequips an item and equips another item at that slot.
     fn exchange(ref self: TContractState, in_item_id: u256, out_item_id: u256);
