@@ -10,7 +10,7 @@ pub mod GearActions {
 
     #[abi(embed_v0)]
     pub impl GearActionsImpl of IGear<ContractState> {
-        fn upgrade(
+        fn upgrade_gear(
             ref self: ContractState, item_id: u256,
         ) { // check if the available upgrade materials `id` is present in the caller's address
         // TODO: Security
@@ -48,7 +48,9 @@ pub mod GearActions {
 
         fn unequip(ref self: ContractState, item_id: Array<u256>) {}
 
-        fn get_configuration(ref self: ContractState, item_id: u256) -> Option<GearProperties> {}
+        fn get_configuration(ref self: ContractState, item_id: u256) -> Option<GearProperties> {
+            Option::None
+        }
 
         // This configure should take in an enum that lists all Gear Types with their structs
         // This function would be blocked at the moment, we shall use the default configuration
@@ -68,9 +70,9 @@ pub mod GearActions {
         // These functions might be reserved for players within a specific faction
 
         // this function forges and creates a new item id based
-        fn forge(ref self: ContractState, item_ids: Array<u256>) -> u256 {
+        fn forge(ref self: ContractState, item_ids: Array<u256>) {
             // should create a new asset. Perhaps deduct credits from the player.
-            0
+            // 0
         }
 
         fn awaken(ref self: ContractState, exchange: Array<u256>) {}
