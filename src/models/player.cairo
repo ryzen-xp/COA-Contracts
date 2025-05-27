@@ -17,10 +17,10 @@ pub struct Player {
     pub id: ContractAddress,
     pub hp: u128,
     pub max_hp: u128,
-    pub equipped: Array<u256>,  // equipped from Player Inventory
+    pub equipped: Array<u256>, // equipped from Player Inventory
     pub max_equip_slot: u32,
     pub rank: PlayerRank,
-    pub level: u256,    // this level is broken down from exps, usuable for boosters
+    pub level: u256, // this level is broken down from exps, usuable for boosters
     pub faction: felt252,
     pub next_rank_in: u64,
     pub left_hand: Array<u256>,
@@ -30,7 +30,7 @@ pub struct Player {
     pub upper_torso: Array<u256>,
     pub lower_torso: Array<u256>,
     pub back: u256, // hangables, but it's usually just an item, leave it one for now.
-    pub waist: Array<u256>,     // max len for this field should be 8. (for now).
+    pub waist: Array<u256> // max len for this field should be 8. (for now).
 }
 
 #[generate_trait]
@@ -43,7 +43,7 @@ pub impl PlayerImpl of PlayerTrait {
             self.max_hp = DEFAULT_HP;
             self.max_equip_slot = DEFAULT_MAX_EQUIPPABLE_SLOT;
             self.rank = Default::default();
-            self.next_rank_in = self.rank.compute_max_val();    // change this
+            self.next_rank_in = self.rank.compute_max_val(); // change this
         }
     }
 
@@ -72,25 +72,25 @@ pub impl PlayerImpl of PlayerTrait {
     fn mint_batch(ref self: Player) {}
 
     #[inline(always)]
-    fn purchase(ref self: Player, item_id: u256) {
-        // use the item trait and add this to their inventory, using the erc1155
-        // use the inventory trait `add to inventory` for this feat
-        // the systems must check if this item exists before calling this function
+    fn purchase(
+        ref self: Player, item_id: u256,
+    ) { // use the item trait and add this to their inventory, using the erc1155
+    // use the inventory trait `add to inventory` for this feat
+    // the systems must check if this item exists before calling this function
     }
 
-    fn is_available(self: @Player, item_id: u256) {
+    fn is_available(self: @Player, item_id: u256) {}
 
-    }
-
-    fn use_item(ref self: Player, ref world: WorldStorage, id: u256) {
-        // once used, it should be burned. 
-        // Say an asset that increases hp or xp.
-        // All these should be done in the Inventory trait.
-        // the item trait called by this function should take in the ref of this player
-        // replace item_id with the original item to use it's trait
-        // the world manipulations would be optimized here.
-        // And i bet you can only use this item only if it is equipped.
-        // Health should be fungible
+    fn use_item(
+        ref self: Player, ref world: WorldStorage, id: u256,
+    ) { // once used, it should be burned.
+    // Say an asset that increases hp or xp.
+    // All these should be done in the Inventory trait.
+    // the item trait called by this function should take in the ref of this player
+    // replace item_id with the original item to use it's trait
+    // the world manipulations would be optimized here.
+    // And i bet you can only use this item only if it is equipped.
+    // Health should be fungible
     }
 
     fn add_xp(ref self: Player, value: u256) -> bool {
@@ -113,19 +113,20 @@ pub impl PlayerImpl of PlayerTrait {
     }
 
     fn is_equippable(self: @Player, item_id: u256) -> bool {
-
+        false
     }
 
-    fn item
+    fn is_equipped(self: @Player, type_id: u128) -> u256 {
+        0
+    }
 
     #[inline(always)]
     fn check(self: @Player) {
         assert(self.id.is_non_zero(), Errors::ZERO_PLAYER);
     }
-
     // fn equip(ref self: Player, ref Item) {
-    //     assert()
-    // }
+//     assert()
+// }
 }
 
 fn erc1155(contract_address: ContractAddress) -> IERC1155Dispatcher {
