@@ -70,7 +70,9 @@ pub mod GearActions {
         // These functions might be reserved for players within a specific faction
 
         // this function forges and creates a new item id based
-        fn forge(ref self: ContractState, item_ids: Array<u256>) {// should create a new asset. Perhaps deduct credits from the player.
+        fn forge(
+            ref self: ContractState, item_ids: Array<u256>,
+        ) { // should create a new asset. Perhaps deduct credits from the player.
         // 0
         }
 
