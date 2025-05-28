@@ -1,9 +1,10 @@
 use starknet::ContractAddress;
+use crate::helpers::base::ContractAddressDefault;
 
 #[dojo::model]
 #[derive(Drop, Copy, Serde, Default)]
 pub struct Operator {
-    #[id]
+    #[key]
     pub id: ContractAddress,
     pub is_operator: bool,
 }

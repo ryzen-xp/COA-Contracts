@@ -7,7 +7,7 @@ pub trait IPlayer<TContractState> {
         ref self: TContractState,
         target: Array<u256>,
         target_types: Array<felt252>,
-        with_item: u256,
+        with_items: Array<u256>,
     );
     fn get_player(self: @TContractState, player_id: u256) -> Player;
     fn register_guild(ref self: TContractState);
@@ -21,17 +21,19 @@ pub mod PlayerActions {
 
     // const GEAR_
 
-
-    fn dojo_init(ref self: ContractState, admin: ContractAddress, default_amount_of_credits: u256) {// write admin
+    fn dojo_init(
+        ref self: ContractState, admin: ContractAddress, default_amount_of_credits: u256,
+    ) { // write admin
     // write default amount of credits.
 
     }
 
     #[abi(embed_v0)]
     impl PlayerActionsImpl of IPlayer<ContractState> {
-        fn new(ref self: ContractState, faction: felt252) {// create the player
+        fn new(ref self: ContractState, faction: felt252) { // create the player
         // and call mint
         // maybe in the future, you implement a `mint_default()`
+        // spawn player at some random location.
         }
 
         fn deal_damage(
@@ -39,7 +41,7 @@ pub mod PlayerActions {
             target: Array<u256>,
             target_types: Array<felt252>,
             with_items: Array<u256>,
-        ) {// check if the player and the items exists..
+        ) { // check if the player and the items exists..
         // assert that the items are something that can deal damage
         // from no. 2, not just assert, handle appropriately, but do not panic
         // factor in the faction type and add additional damage
@@ -48,6 +50,8 @@ pub mod PlayerActions {
         // check if the item has been equipped
         // to find out the item's output when upgraded, call the item.output(val), where val is the
         // upgraded level.
+
+        // if with_items.len() is zero, then it's a normal melee attack.
 
         // factor in the target's damage factor... might later turn out not to be damaged
         // this means that each target or item should have a damage factor, and might cause credits
@@ -59,10 +63,13 @@ pub mod PlayerActions {
 
         // or recieve damage should probably be an internal trait for now.
         }
+
+        fn get_player(self: @ContractState, player_id: u256) -> Player {
+            Default::default()
+        }
+        fn register_guild(ref self: ContractState) {}
     }
 
     #[generate_trait]
-    impl InternalImpl of InternalTrait {
-        
-    }
+    impl InternalImpl of InternalTrait {}
 }

@@ -10,9 +10,7 @@ pub mod erc1155 {
 
 pub mod models {
     pub mod player;
-    pub mod fungible;
     pub mod core;
-    pub mod quest;
     pub mod gear;
 }
 
@@ -22,6 +20,7 @@ pub mod interfaces {
 
 pub mod helpers {
     pub mod base;
+    pub mod gear;
 }
 
 pub mod types {
