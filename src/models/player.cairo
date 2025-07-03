@@ -116,8 +116,42 @@ pub impl PlayerImpl of PlayerTrait {
         false
     }
 
-    fn is_equipped(self: @Player, type_id: u128) -> u256 {
-        0
+
+    fn is_equipped(self: Player, type_id: u128) -> u256 {
+        let equipped_arrays = array![
+            self.equipped,
+            self.right_hand,
+            self.left_leg,
+            self.right_leg,
+            self.upper_torso,
+            self.lower_torso,
+            self.waist,
+        ];
+
+        let mut result: u256 = 0;
+        let mut found = false;
+        let mut i = 0;
+        let arrays_len = equipped_arrays.len();
+        while i < arrays_len && !found {
+            let arr = equipped_arrays.at(i);
+            let mut j = 0;
+            let arr_len = arr.len();
+            while j < arr_len && !found {
+                let item = *arr.at(j);
+                if get_high(item) == type_id {
+                    result = item;
+                    found = true;
+                }
+                j = j + 1;
+            };
+            i = i + 1;
+        };
+
+        if !found && get_high(self.back) == type_id {
+            result = self.back;
+        }
+
+        result
     }
 
     #[inline(always)]
@@ -139,4 +173,9 @@ fn erc1155mint(contract_address: ContractAddress) -> IERC1155MintableDispatcher 
 
 pub mod Errors {
     pub const ZERO_PLAYER: felt252 = 'ZERO PLAYER';
+}
+
+// Helper function to get the high 128 bits from a u256
+fn get_high(val: u256) -> u128 {
+    val.high
 }
