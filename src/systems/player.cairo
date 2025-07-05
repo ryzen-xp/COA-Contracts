@@ -41,12 +41,11 @@ pub mod PlayerActions {
 
         fn deal_damage(
             ref self: ContractState,
-            attacker_id : u256 ,
+            attacker_id: u256,
             target: Array<u256>,
             target_types: Array<felt252>,
             with_items: Array<u256>,
         ) {
-
             let attacker = self.get_player(attacker_id);
             let attacker_xp: u32 = attacker.xp;
 
@@ -77,7 +76,7 @@ pub mod PlayerActions {
 
                 self.receive_damage(*target_id, actual_damage.into());
             }
-        // assert that the items are something that can deal damage
+            // assert that the items are something that can deal damage
         // from no. 2, not just assert, handle appropriately, but do not panic
         // factor in the faction type and add additional damage
         // factor in the weapon type and xp // rank trait.
