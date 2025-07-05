@@ -45,4 +45,4 @@ pub impl ArmourImpl of ArmourTrait {
     fn get_total_bonus(self: Armour) -> u64 {
         self.stat_bonus.strength + self.stat_bonus.vitality + self.stat_bonus.luck
     }
-} 
+}
