@@ -19,6 +19,18 @@ pub mod PlayerActions {
     use crate::models::player::{Player, PlayerTrait};
     use super::IPlayer;
 
+    // Faction types as felt252 constants
+    const CHAOS_MERCENARIES: felt252 = 'CHAOS_MERCENARIES';
+    const SUPREME_LAW: felt252 = 'SUPREME_LAW';
+    const REBEL_TECHNOMANCERS: felt252 = 'REBEL_TECHNOMANCERS';
+
+    #[derive(Copy, Drop, Serde)]
+    struct FactionStats {
+        damage_multiplier: u256,
+        defense_multiplier: u256,
+        speed_multiplier: u256,
+    }
+
     // const GEAR_
 
     fn dojo_init(
@@ -67,7 +79,12 @@ pub mod PlayerActions {
         let caller = get_caller_address();
         // get the player
         let player: Player = world.read_model(caller);
-
+        
+        // Validate input arrays have same length
+        assert(target.len() == target_types.len(), 'Target arrays length mismatch');
+        
+        let mut results = array![];
+        let mut target_index = 0;
         }
 
         fn get_player(self: @ContractState, player_id: u256) -> Player {
@@ -80,6 +97,34 @@ pub mod PlayerActions {
     impl InternalImpl of InternalTrait {
         fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
             self.world(@"dojo_starter")
+        }
+        fn get_faction_stats(self: @ContractState, faction: felt252) -> FactionStats {
+            if faction == CHAOS_MERCENARIES {
+                FactionStats {
+                    damage_multiplier: 120, // +20% damage
+                    defense_multiplier: 100,
+                    speed_multiplier: 100,
+                }
+            } else if faction == SUPREME_LAW {
+                FactionStats {
+                    damage_multiplier: 100,
+                    defense_multiplier: 125, // +25% defense
+                    speed_multiplier: 100,
+                }
+            } else if faction == REBEL_TECHNOMANCERS {
+                FactionStats {
+                    damage_multiplier: 100,
+                    defense_multiplier: 100,
+                    speed_multiplier: 115, // +15% speed (simplified for now)
+                }
+            } else {
+                // Default/no faction
+                FactionStats {
+                    damage_multiplier: 100,
+                    defense_multiplier: 100,
+                    speed_multiplier: 100,
+                }
+            }
         }
     }
 }
