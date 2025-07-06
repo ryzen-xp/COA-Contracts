@@ -25,11 +25,11 @@ pub struct Gear {
     pub max_upgrade_level: u64,
 }
 
-#[derive(Drop, Copy, Serde, PartialEq, Default)]
-pub enum GearType {
-    #[default]
-    None,
-}
+// #[derive(Drop, Copy, Serde, PartialEq, Default)]
+// pub enum GearType {
+//     #[default]
+//     None,
+// }
 
 #[derive(Drop, Copy, Serde, Default)]
 pub struct GearProperties {
