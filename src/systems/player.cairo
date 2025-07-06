@@ -62,6 +62,12 @@ pub mod PlayerActions {
         // this means that the PlayerTrait should have a recieve_damage,
 
         // or recieve damage should probably be an internal trait for now.
+
+        let world = self.world_default();
+        let caller = get_caller_address();
+        // get the player
+        let player: Player = world.read_model(caller);
+
         }
 
         fn get_player(self: @ContractState, player_id: u256) -> Player {
@@ -71,5 +77,9 @@ pub mod PlayerActions {
     }
 
     #[generate_trait]
-    impl InternalImpl of InternalTrait {}
+    impl InternalImpl of InternalTrait {
+        fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
+            self.world(@"dojo_starter")
+        }
+    }
 }
