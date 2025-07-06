@@ -20,6 +20,14 @@ pub enum PlayerRank {
     S,
 }
 
+/// StatBonus struct for armour and gear bonuses
+#[derive(Drop, Copy, Debug, PartialEq, Introspect, Serde, Default)]
+pub struct StatBonus {
+    pub strength: u64,
+    pub vitality: u64,
+    pub luck: u64,
+}
+
 const BASE_XP: u256 = 1000; // can be changed.
 
 #[generate_trait]
