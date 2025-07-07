@@ -249,7 +249,7 @@ pub mod PlayerActions {
             if target_type == TARGET_LIVING {
                 let mut target = self.get_player(target_id);
                 target.receive_damage(damage);
-            } else {// TODO: Implement the damage trait to object after game objects are defined.
+            } else { // TODO: Implement the damage trait to object after game objects are defined.
             }
         }
     }

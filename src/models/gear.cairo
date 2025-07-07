@@ -48,13 +48,14 @@ pub impl GearImpl of GearTrait {
         1000000
     }
 }
-
 // pub trait GearTrait {
 //     fn with_id(id: u256) -> Gear;
 //     fn is_upgradeable(ref self: Gear) -> bool;
 //     fn forge(
 //         items: Array<u256>,
-//     ) -> u256; // can only be implemented on specific ids. Might invoke the worldstorage if necessary.
+//     ) -> u256; // can only be implemented on specific ids. Might invoke the worldstorage if
+//     necessary.
 //     fn is_fungible(id: u256);
 //     fn output(self: @Gear, value: u256);
 // }
+
