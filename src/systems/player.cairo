@@ -1,4 +1,4 @@
-use crate::models::{player::Player, gear::Gear};
+use crate::models::{player::Player};
 
 #[starknet::interface]
 pub trait IPlayer<TContractState> {
@@ -17,7 +17,10 @@ pub trait IPlayer<TContractState> {
 pub mod PlayerActions {
     use starknet::{ContractAddress, get_caller_address};
     use crate::models::player::{Player, PlayerTrait};
+    use crate::models::gear::{Gear, GearTrait};
     use super::IPlayer;
+    use dojo::model::{ModelStorage, ModelValueStorage};
+    use dojo::world::WorldStorageTrait;
 
     // Faction types as felt252 constants
     const CHAOS_MERCENARIES: felt252 = 'CHAOS_MERCENARIES';
@@ -87,7 +90,6 @@ pub mod PlayerActions {
             // Validate input arrays have same length
             assert(target.len() == target_types.len(), 'Target arrays length mismatch');
 
-            let mut results = array![];
             let mut target_index = 0;
 
             // Calculate faction bonuses
@@ -128,7 +130,7 @@ pub mod PlayerActions {
     #[generate_trait]
     impl InternalImpl of InternalTrait {
         fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
-            self.world(@"dojo_starter")
+            self.world(@"coa")
         }
         fn get_faction_stats(self: @ContractState, faction: felt252) -> FactionStats {
             if faction == CHAOS_MERCENARIES {
