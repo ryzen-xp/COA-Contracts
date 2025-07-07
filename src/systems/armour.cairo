@@ -30,7 +30,7 @@ pub mod ArmourActions {
     fn dojo_init(ref self: ContractState, admin: ContractAddress) {}
 
     #[abi(embed_v0)]
-    impl ArmourActionsImpl of IArmour<ContractState> {
+    pub impl ArmourActionsImpl of IArmour<ContractState> {
         fn create_armour(
             ref self: ContractState, id: u256, item_type: u64, name: felt252, level: u256,
         ) { // TODO: Implement world storage operations

@@ -11,6 +11,9 @@ pub struct Armour {
     pub stat_bonus: StatBonus,
     pub special_effect: felt252,
     pub is_utilized: bool,
+    pub damage_reduction: u128, // Percentage of damage reduced (0-100)
+    pub durability: u64, // Current durability
+    pub max_durability: u64,
 }
 
 #[generate_trait]
@@ -44,5 +47,29 @@ pub impl ArmourImpl of ArmourTrait {
 
     fn get_total_bonus(self: Armour) -> u64 {
         self.stat_bonus.strength + self.stat_bonus.vitality + self.stat_bonus.luck
+    }
+
+    fn calculate_damage_reduction(self: @Armour, damage: u128) -> u128 {
+        if *self.is_utilized {
+            return damage;
+        }
+
+        let reduction = (damage * (*self.damage_reduction)) / 100;
+        damage - reduction
+    }
+
+    fn apply_damage(ref self: Armour, damage: u128) -> u128 {
+        let remaining_damage = self.calculate_damage_reduction(damage);
+
+        if self.durability > 0 {
+            let durability_loss = if remaining_damage > self.durability.into() {
+                self.durability
+            } else {
+                remaining_damage.try_into().unwrap_or(0)
+            };
+            self.durability -= durability_loss;
+        }
+
+        remaining_damage
     }
 }

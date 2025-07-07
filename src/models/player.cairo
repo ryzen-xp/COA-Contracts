@@ -160,8 +160,15 @@ pub impl PlayerImpl of PlayerTrait {
         assert(self.id.is_non_zero(), Errors::ZERO_PLAYER);
     }
     // fn equip(ref self: Player, ref Item) {
-//     assert()
-// }
+    //     assert()
+    // }
+
+    fn get_equipped_armor(self: @Player) -> Array<u256> {
+        let mut armor_ids = ArrayTrait::new();
+        // Logic to get all equipped armor IDs
+        // This would check all armor slots and return their IDs
+        armor_ids
+    }
 }
 
 fn erc1155(contract_address: ContractAddress) -> IERC1155Dispatcher {
