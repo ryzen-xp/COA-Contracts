@@ -80,7 +80,9 @@ pub impl PlayerImpl of PlayerTrait {
     // the systems must check if this item exists before calling this function
     }
 
-    fn is_available(self: @Player, item_id: u256) {}
+    fn is_available(self: @Player, item_id: u256) -> bool {
+        true
+    }
 
     fn use_item(
         ref self: Player, ref world: WorldStorage, id: u256,
@@ -153,6 +155,8 @@ pub impl PlayerImpl of PlayerTrait {
         }
 
         result
+    }
+    fn receive_damage(ref self: Player, damage: u256) { // TODO: add logic for receiving damage
     }
 
     #[inline(always)]
