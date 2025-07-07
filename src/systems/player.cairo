@@ -18,8 +18,6 @@ pub trait IPlayer<TContractState> {
 pub mod PlayerActions {
     use starknet::{ContractAddress, get_caller_address};
     use crate::models::player::{Player, PlayerTrait};
-    use crate::models::armour::{ArmourTrait, ArmourImpl};
-    use crate::systems::armour::ArmourActions::ArmourActionsImpl;
     use super::IPlayer;
 
     // const GEAR_
@@ -108,30 +106,6 @@ pub mod PlayerActions {
 
     #[generate_trait]
     impl InternalImpl of InternalTrait {
-        fn receive_damage(ref self: ContractState, player_id: u256, damage: u128) {
-            let mut player = self.get_player(player_id);
-
-            // >Check all equipped armor!!!!!!!!!!
-            let mut remaining_damage = damage;
-            let equipped_armor = player.get_equipped_armor();
-
-            for i in 0..equipped_armor.len() {
-                let armor_id = equipped_armor.at(i);
-                let mut armor = self.get_armour_details(*armor_id);
-
-                remaining_damage = armor.apply_damage(remaining_damage);
-
-                if remaining_damage == 0 {
-                    break;
-                }
-            };
-
-            // >>Apply remaining damage to player health!!!!!
-            if remaining_damage > player.hp {
-                player.hp = 0;
-            } else {
-                player.hp -= remaining_damage;
-            }
-        }
+        fn receive_damage(ref self: ContractState, player_id: u256, damage: u256) {}
     }
 }
