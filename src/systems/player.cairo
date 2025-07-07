@@ -38,6 +38,8 @@ pub mod PlayerActions {
     }
 
     // const GEAR_
+    const MIN_THRESHOLD: u32 = 80;
+
 
     fn dojo_init(
         ref self: ContractState, admin: ContractAddress, default_amount_of_credits: u256,
