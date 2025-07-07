@@ -19,8 +19,7 @@ pub mod PlayerActions {
     use crate::models::player::{Player, PlayerTrait};
     use crate::models::gear::{Gear, GearTrait};
     use super::IPlayer;
-    use dojo::model::{ModelStorage, ModelValueStorage};
-    use dojo::world::WorldStorageTrait;
+    use dojo::model::{ModelStorage};
 
     // Faction types as felt252 constants
     const CHAOS_MERCENARIES: felt252 = 'CHAOS_MERCENARIES';
@@ -108,11 +107,11 @@ pub mod PlayerActions {
 
                 if with_items.len() == 0 {
                     // Normal melee attack
-                    total_damage = self.calculate_melee_damage(player, faction_stats);
+                    total_damage = self.calculate_melee_damage(player.clone(), faction_stats);
                 } else {
                     // Weapon-based attack
                     total_damage = self
-                        .calculate_weapon_damage(player, with_items.span(), faction_stats);
+                        .calculate_weapon_damage(player.clone(), with_items.span(), faction_stats);
                 }
 
                 // Apply the damage
@@ -192,7 +191,7 @@ pub mod PlayerActions {
                 let item: Gear = world.read_model(item_id);
 
                 // Check that item can deal damage
-                if !self.can_deal_damage(item) {
+                if !self.can_deal_damage(item.clone()) {
                     continue;
                 }
 
