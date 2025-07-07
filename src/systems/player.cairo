@@ -1,4 +1,4 @@
-use crate::models::player::Player;
+use crate::models::{player::Player, gear::Gear};
 
 #[starknet::interface]
 pub trait IPlayer<TContractState> {
@@ -23,6 +23,10 @@ pub mod PlayerActions {
     const CHAOS_MERCENARIES: felt252 = 'CHAOS_MERCENARIES';
     const SUPREME_LAW: felt252 = 'SUPREME_LAW';
     const REBEL_TECHNOMANCERS: felt252 = 'REBEL_TECHNOMANCERS';
+
+    // Target types as felt252 constants
+    const TARGET_LIVING: felt252 = 'LIVING';
+    const TARGET_OBJECT: felt252 = 'OBJECT';
 
     #[derive(Copy, Drop, Serde)]
     struct FactionStats {
@@ -85,6 +89,34 @@ pub mod PlayerActions {
 
             let mut results = array![];
             let mut target_index = 0;
+
+            // Calculate faction bonuses
+            let faction_stats = self.get_faction_stats(player.faction);
+
+            loop {
+                if target_index >= target.len() {
+                    break;
+                }
+
+                let target_id = *target.at(target_index);
+                let target_type = *target_types.at(target_index);
+
+                // Calculate base damage
+                let mut total_damage = 0;
+
+                if with_items.len() == 0 {
+                    // Normal melee attack
+                    total_damage = self.calculate_melee_damage(player, faction_stats);
+                } else {
+                    // Weapon-based attack
+                    total_damage = self
+                        .calculate_weapon_damage(player, with_items.span(), faction_stats);
+                }
+
+                // Apply the damage
+                self.damage_target(target_id, target_type, total_damage);
+                target_index += 1;
+            };
         }
 
         fn get_player(self: @ContractState, player_id: u256) -> Player {
@@ -208,6 +240,16 @@ pub mod PlayerActions {
         fn get_weapon_type_damage_multiplier(self: @ContractState, item_type: felt252) -> u256 {
             // TODO: add proper logic for weapon damage percentage
             110 // 10% added damage
+        }
+
+        fn damage_target(
+            ref self: ContractState, target_id: u256, target_type: felt252, damage: u256,
+        ) {
+            if target_type == TARGET_LIVING {
+                let mut target = self.get_player(target_id);
+                target.receive_damage(damage);
+            } else {// TODO: Implement the damage trait to object after game objects are defined.
+            }
         }
     }
 }

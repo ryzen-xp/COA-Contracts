@@ -119,6 +119,8 @@ pub impl PlayerImpl of PlayerTrait {
     fn is_equipped(self: @Player, type_id: u128) -> u256 {
         0
     }
+    fn receive_damage(ref self: Player, damage: u256) {// TODO: add logic for receiving damage
+    }
 
     #[inline(always)]
     fn check(self: @Player) {
