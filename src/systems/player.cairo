@@ -126,5 +126,22 @@ pub mod PlayerActions {
                 }
             }
         }
+        fn calculate_base_weapon_damage(
+            self: @ContractState, 
+            player: Player, 
+            faction_stats: FactionStats
+        ) -> u256 {
+            // Base weapon damage from player stats
+            let base_damage = 10 + (player.level / 100); // Simple Level scaling
+            
+            // Apply faction damage multiplier
+            let faction_damage = (base_damage * faction_stats.damage_multiplier) / 100;
+            
+            // Factor in player rank/level
+            let rank_multiplier = 100 + (player.rank.into() * 5); // 5% per rank
+            let final_damage = (faction_damage * rank_multiplier) / 100;
+            
+            final_damage
+        }
     }
 }
