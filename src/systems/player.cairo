@@ -54,7 +54,18 @@ pub mod PlayerActions {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
+        DamageDealt: DamageDealt,
         PlayerDamaged: PlayerDamaged,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct DamageDealt {
+        #[key]
+        attacker: ContractAddress,
+        #[key]
+        target: u256,
+        damage: u256,
+        target_type: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -142,6 +153,19 @@ pub mod PlayerActions {
 
                 // Apply the damage
                 self.damage_target(target_id, target_type, total_damage);
+
+                self
+                    .emit(
+                        Event::DamageDealt(
+                            DamageDealt {
+                                attacker: caller,
+                                target: target_id,
+                                damage: total_damage,
+                                target_type,
+                            },
+                        ),
+                    );
+
                 target_index += 1;
             };
         }
