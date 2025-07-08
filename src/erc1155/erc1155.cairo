@@ -1,6 +1,34 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
+pub trait IERC1155<TContractState> {
+    fn balance_of(self: @TContractState, account: ContractAddress, id: u256) -> u256;
+    fn balance_of_batch(
+        self: @TContractState, accounts: Span<ContractAddress>, ids: Span<u256>,
+    ) -> Span<u256>;
+    fn is_approved_for_all(
+        self: @TContractState, account: ContractAddress, operator: ContractAddress,
+    ) -> bool;
+    fn set_approval_for_all(ref self: TContractState, operator: ContractAddress, approved: bool);
+    fn safe_transfer_from(
+        ref self: TContractState,
+        from: ContractAddress,
+        to: ContractAddress,
+        id: u256,
+        amount: u256,
+        data: Span<felt252>,
+    );
+    fn safe_batch_transfer_from(
+        ref self: TContractState,
+        from: ContractAddress,
+        to: ContractAddress,
+        ids: Span<u256>,
+        amounts: Span<u256>,
+        data: Span<felt252>,
+    );
+}
+
+#[starknet::interface]
 pub trait IERC1155Mintable<TContractState> {
     fn mint(
         ref self: TContractState,
@@ -23,7 +51,7 @@ pub trait IERC1155Mintable<TContractState> {
 }
 
 #[starknet::contract]
-pub mod IERC1155 {
+pub mod ERC1155Contract {
     use starknet::ContractAddress;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc1155::{ERC1155Component, ERC1155HooksEmptyImpl};
