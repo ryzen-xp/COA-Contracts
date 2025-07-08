@@ -21,11 +21,11 @@ pub trait IPlayer<TContractState> {
 pub mod PlayerActions {
     use starknet::{ContractAddress, get_caller_address};
     use crate::models::player::{Player, PlayerTrait};
+    use crate::models::gear::{Gear, GearTrait};
     use crate::erc1155::erc1155::{
         IERC1155Dispatcher, IERC1155DispatcherTrait, IERC1155MintableDispatcher,
         IERC1155MintableDispatcherTrait,
     };
-    use crate::models::gear::{Gear, GearTrait};
     use super::IPlayer;
     use dojo::model::{ModelStorage};
 
@@ -204,7 +204,130 @@ pub mod PlayerActions {
 
     #[generate_trait]
     impl InternalImpl of InternalTrait {
-        fn receive_damage(ref self: ContractState, player_id: u256, damage: u256) {}
+        fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
+            self.world(@"coa")
+        }
+        fn get_faction_stats(self: @ContractState, faction: felt252) -> FactionStats {
+            if faction == CHAOS_MERCENARIES {
+                FactionStats {
+                    damage_multiplier: 120, // +20% damage
+                    defense_multiplier: 100,
+                    speed_multiplier: 100,
+                }
+            } else if faction == SUPREME_LAW {
+                FactionStats {
+                    damage_multiplier: 100,
+                    defense_multiplier: 125, // +25% defense
+                    speed_multiplier: 100,
+                }
+            } else if faction == REBEL_TECHNOMANCERS {
+                FactionStats {
+                    damage_multiplier: 100,
+                    defense_multiplier: 100,
+                    speed_multiplier: 115 // +15% speed (simplified for now)
+                }
+            } else {
+                // Default/no faction
+                FactionStats {
+                    damage_multiplier: 100, defense_multiplier: 100, speed_multiplier: 100,
+                }
+            }
+        }
+        fn calculate_melee_damage(
+            self: @ContractState, player: Player, faction_stats: FactionStats,
+        ) -> u256 {
+            // Base weapon damage from player stats
+            let base_damage = 10 + (player.level / 100); // Simple Level scaling
+
+            // Apply faction damage multiplier
+            let faction_damage = (base_damage * faction_stats.damage_multiplier) / 100;
+
+            // Factor in player rank/level
+            let rank_multiplier = 100 + (player.rank.into() * 5); // 5% per rank
+            let final_damage = (faction_damage * rank_multiplier) / 100;
+
+            final_damage
+        }
+
+        fn calculate_weapon_damage(
+            self: @ContractState, player: Player, items: Span<u256>, faction_stats: FactionStats,
+        ) -> u256 {
+            let world = self.world_default();
+            let mut total_damage = 0;
+            let mut item_index = 0;
+
+            loop {
+                if item_index >= items.len() {
+                    break;
+                }
+
+                let item_id = *items.at(item_index);
+
+                // Get the item
+                let item: Gear = world.read_model(item_id);
+
+                // Check that item can deal damage
+                if !self.can_deal_damage(item.clone()) {
+                    continue;
+                }
+
+                // Check that item is equipped
+                if !player.is_available(item.id) {
+                    continue;
+                }
+
+                //
+                // Calculate item damage with upgrades
+                let base_item_damage = self.get_item_base_damage(item.item_type);
+                let upgraded_damage = if item.upgrade_level > 0 {
+                    item.output(item.upgrade_level)
+                } else {
+                    base_item_damage
+                };
+
+                // Apply weapon type damage multiplier
+                let weapon_multiplier = self.get_weapon_type_damage_multiplier(item.item_type);
+                let weapon_damage = (upgraded_damage * weapon_multiplier) / 100;
+
+                total_damage += weapon_damage;
+                item_index += 1;
+            };
+
+            // Apply faction damage multiplier
+            let faction_damage = (total_damage * faction_stats.damage_multiplier) / 100;
+
+            // Factor in player XP and rank
+            let xp_bonus = (player.level / 50); // XP bonus
+            let rank_multiplier = 100 + (player.rank.into() * 5);
+            let final_damage = ((faction_damage + xp_bonus) * rank_multiplier) / 100;
+
+            final_damage
+        }
+
+        fn can_deal_damage(self: @ContractState, item: Gear) -> bool {
+            // Custom Logic here
+            true
+        }
+
+        fn get_item_base_damage(self: @ContractState, item_type: felt252) -> u256 {
+            // TODO: add proper logic for damage calculation when item types are defined.
+            20
+        }
+
+        fn get_weapon_type_damage_multiplier(self: @ContractState, item_type: felt252) -> u256 {
+            // TODO: add proper logic for weapon damage percentage
+            110 // 10% added damage
+        }
+
+        fn damage_target(
+            ref self: ContractState, target_id: u256, target_type: felt252, damage: u256,
+        ) {
+            if target_type == TARGET_LIVING {
+                let mut target = self.get_player(target_id);
+                target.receive_damage(damage);
+            } else { // TODO: Implement the damage trait to object after game objects are defined.
+            }
+        }
 
         fn get_erc1155_address(self: @ContractState) -> ContractAddress {
             // In a real implementation, this would be stored in the contract state
@@ -262,131 +385,5 @@ pub mod PlayerActions {
 
     fn erc1155(contract_address: ContractAddress) -> IERC1155Dispatcher {
         IERC1155Dispatcher { contract_address }
-    }
-    
-    fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
-        self.world(@"coa")
-    }
-    fn get_faction_stats(self: @ContractState, faction: felt252) -> FactionStats {
-        if faction == CHAOS_MERCENARIES {
-            FactionStats {
-                damage_multiplier: 120, // +20% damage
-                defense_multiplier: 100,
-                speed_multiplier: 100,
-            }
-        } else if faction == SUPREME_LAW {
-            FactionStats {
-                damage_multiplier: 100,
-                defense_multiplier: 125, // +25% defense
-                speed_multiplier: 100,
-            }
-        } else if faction == REBEL_TECHNOMANCERS {
-            FactionStats {
-                damage_multiplier: 100,
-                defense_multiplier: 100,
-                speed_multiplier: 115 // +15% speed (simplified for now)
-            }
-        } else {
-            // Default/no faction
-            FactionStats {
-                damage_multiplier: 100, defense_multiplier: 100, speed_multiplier: 100,
-            }
-        }
-    }
-    fn calculate_melee_damage(
-        self: @ContractState, player: Player, faction_stats: FactionStats,
-    ) -> u256 {
-        // Base weapon damage from player stats
-        let base_damage = 10 + (player.level / 100); // Simple Level scaling
-
-        // Apply faction damage multiplier
-        let faction_damage = (base_damage * faction_stats.damage_multiplier) / 100;
-
-        // Factor in player rank/level
-        let rank_multiplier = 100 + (player.rank.into() * 5); // 5% per rank
-        let final_damage = (faction_damage * rank_multiplier) / 100;
-
-        final_damage
-    }
-
-    fn calculate_weapon_damage(
-        self: @ContractState, player: Player, items: Span<u256>, faction_stats: FactionStats,
-    ) -> u256 {
-        let world = self.world_default();
-        let mut total_damage = 0;
-        let mut item_index = 0;
-
-        loop {
-            if item_index >= items.len() {
-                break;
-            }
-
-            let item_id = *items.at(item_index);
-
-            // Get the item
-            let item: Gear = world.read_model(item_id);
-
-            // Check that item can deal damage
-            if !self.can_deal_damage(item.clone()) {
-                continue;
-            }
-
-            // Check that item is equipped
-            if !player.is_available(item.id) {
-                continue;
-            }
-
-            //
-            // Calculate item damage with upgrades
-            let base_item_damage = self.get_item_base_damage(item.item_type);
-            let upgraded_damage = if item.upgrade_level > 0 {
-                item.output(item.upgrade_level)
-            } else {
-                base_item_damage
-            };
-
-            // Apply weapon type damage multiplier
-            let weapon_multiplier = self.get_weapon_type_damage_multiplier(item.item_type);
-            let weapon_damage = (upgraded_damage * weapon_multiplier) / 100;
-
-            total_damage += weapon_damage;
-            item_index += 1;
-        };
-
-        // Apply faction damage multiplier
-        let faction_damage = (total_damage * faction_stats.damage_multiplier) / 100;
-
-        // Factor in player XP and rank
-        let xp_bonus = (player.level / 50); // XP bonus
-        let rank_multiplier = 100 + (player.rank.into() * 5);
-        let final_damage = ((faction_damage + xp_bonus) * rank_multiplier) / 100;
-
-        final_damage
-    }
-
-    fn can_deal_damage(self: @ContractState, item: Gear) -> bool {
-        // Custom Logic here
-        true
-    }
-
-    fn get_item_base_damage(self: @ContractState, item_type: felt252) -> u256 {
-        // TODO: add proper logic for damage calculation when item types are defined.
-        20
-    }
-
-    fn get_weapon_type_damage_multiplier(self: @ContractState, item_type: felt252) -> u256 {
-        // TODO: add proper logic for weapon damage percentage
-        110 // 10% added damage
-    }
-
-    fn damage_target(
-        ref self: ContractState, target_id: u256, target_type: felt252, damage: u256,
-    ) {
-        if target_type == TARGET_LIVING {
-            let mut target = self.get_player(target_id);
-            target.receive_damage(damage);
-        } else { // TODO: Implement the damage trait to object after game objects are defined.
-        }
-    }
     }
 }

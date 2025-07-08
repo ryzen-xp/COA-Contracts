@@ -132,4 +132,3 @@ pub mod ERC1155Contract {
         }
     }
 }
-
