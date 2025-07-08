@@ -279,7 +279,6 @@ pub mod PlayerActions {
         }
 
         fn receive_damage(ref self: ContractState, player_id: u256, damage: u256) {
-           
             let mut world = self.world_default();
             let mut player = world.read_model(player_id);
 
