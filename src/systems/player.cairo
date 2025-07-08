@@ -15,9 +15,11 @@ pub trait IPlayer<TContractState> {
 
 #[dojo::contract]
 pub mod PlayerActions {
+    use core::num::traits::Zero;
     use starknet::{ContractAddress, get_caller_address};
     use crate::models::player::{Player, PlayerTrait};
     use crate::models::gear::{Gear, GearTrait};
+    use crate::models::armour::{Armour, ArmourTrait};
     use super::IPlayer;
     use dojo::model::{ModelStorage};
 
@@ -30,6 +32,15 @@ pub mod PlayerActions {
     const TARGET_LIVING: felt252 = 'LIVING';
     const TARGET_OBJECT: felt252 = 'OBJECT';
 
+    // Armor type constants (high 128 bits)
+    const ARMOR_HELMET: u128 = 0x2000;
+    const ARMOR_CHESTPLATE: u128 = 0x2001;
+    const ARMOR_LEGGINGS: u128 = 0x2002;
+    const ARMOR_BOOTS: u128 = 0x2003;
+    const ARMOR_GLOVES: u128 = 0x2004;
+    const ARMOR_SHIELD: u128 = 0x2005;
+
+
     #[derive(Copy, Drop, Serde)]
     struct FactionStats {
         damage_multiplier: u256,
@@ -40,6 +51,19 @@ pub mod PlayerActions {
     // const GEAR_
     const MIN_THRESHOLD: u32 = 80;
 
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        PlayerDamaged: PlayerDamaged,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct PlayerDamaged {
+        #[key]
+        player_id: u256,
+        damage_received: u256,
+        remaining_hp: u256,
+    }
 
     fn dojo_init(
         ref self: ContractState, admin: ContractAddress, default_amount_of_credits: u256,
@@ -249,9 +273,69 @@ pub mod PlayerActions {
             ref self: ContractState, target_id: u256, target_type: felt252, damage: u256,
         ) {
             if target_type == TARGET_LIVING {
-                let mut target = self.get_player(target_id);
-                target.receive_damage(damage);
+                self.receive_damage(target_id, damage);
             } else { // TODO: Implement the damage trait to object after game objects are defined.
+            }
+        }
+
+        fn receive_damage(ref self: ContractState, player_id: u256, damage: u256) {
+           
+            let mut world = self.world_default();
+            let mut player = world.read_model(player_id);
+
+            let mut remaining_damage = damage;
+
+            let armor_types = array![
+                ARMOR_HELMET,
+                ARMOR_CHESTPLATE,
+                ARMOR_LEGGINGS,
+                ARMOR_BOOTS,
+                ARMOR_GLOVES,
+                ARMOR_SHIELD,
+            ];
+
+            let mut armor_index = 0;
+            loop {
+                if armor_index >= armor_types.len() || remaining_damage == 0 {
+                    break;
+                }
+
+                let armor_type = *armor_types.at(armor_index);
+                let equipped_item_id = (player.clone()).is_equipped(armor_type);
+
+                if equipped_item_id.is_non_zero() {
+                    let gear: Gear = world.read_model(equipped_item_id);
+
+                    let mut armor: Armour = world.read_model(gear.asset_id);
+
+                    remaining_damage = armor.apply_damage(remaining_damage);
+
+                    world.write_model(@armor);
+                }
+
+                armor_index += 1;
+            };
+
+            //-->> Apply remaining damage to player health!!!!!!
+            if remaining_damage > 0 {
+                if remaining_damage >= player.hp {
+                    player.hp = 0;
+                } else {
+                    player.hp -= remaining_damage;
+                }
+
+                world.write_model(@player);
+
+                self
+                    .emit(
+                        Event::PlayerDamaged(
+                            PlayerDamaged {
+                                player_id,
+                                damage_received: damage - remaining_damage,
+                                remaining_hp: player.hp,
+                            },
+                        ),
+                    );
             }
         }
     }
