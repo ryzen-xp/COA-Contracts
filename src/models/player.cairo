@@ -6,20 +6,34 @@ use crate::erc1155::erc1155::{IERC1155MintableDispatcher, IERC1155MintableDispat
 use crate::types::player::{PlayerRank, PlayerRankTrait};
 use crate::types::base::{CREDITS};
 use dojo::world::{WorldStorage};
+use crate::models::gear::GearType;
+use crate::helpers::gear::parse_id;
 
 const DEFAULT_HP: u256 = 500;
 const DEFAULT_MAX_EQUIPPABLE_SLOT: u32 = 10;
+const WAIST_MAX_SLOTS: u32 = 8;
+const HAND_MAX_COUNT: u32 = 2;
+const MAX_SAME_TYPE_IN_WAIST: u32 = 2;
+const FEET_MAX_SLOTS: u32 = 1;
+const TORSO_MAX_SLOTS: u32 = 1;
+const LEGS_MAX_SLOTS: u32 = 1;
 
 #[derive(Drop, Clone, Serde, Debug, Default, Introspect)]
 pub struct Body {
+    pub head: u256, // For Helmet
+    pub hands: Array<u256>, // For Gloves
     pub left_hand: Array<u256>,
     pub right_hand: Array<u256>,
     pub left_leg: Array<u256>,
     pub right_leg: Array<u256>,
     pub upper_torso: Array<u256>,
     pub lower_torso: Array<u256>,
-    pub back: u256, // Single item for now
+    pub back: u256, // hangables, but it's usually just an item, leave it one for now.
     pub waist: Array<u256>, // Max 8 slots for now.
+    pub feet: Array<u256>, // For Boots
+
+    // Active non-body-worn gear
+    // pub active_vehicle: u256,
 }
 
 #[dojo::model]
@@ -36,7 +50,6 @@ pub struct Player {
     pub faction: felt252,
     pub next_rank_in: u64,
     pub body: Body, // body parts that can be equipped, like hands, legs, torso, etc.
-    // pub back: u256, // hangables, but it's usually just an item, leave it one for now.
 }
 
 #[generate_trait]
@@ -122,8 +135,58 @@ pub impl PlayerImpl of PlayerTrait {
     }
 
     fn is_equippable(self: @Player, item_id: u256) -> bool {
-        false
+        let gear_type = parse_id(item_id);
+    
+        match gear_type {
+            GearType::Helmet => *self.body.head == 0_u256,
+    
+            GearType::ChestArmor => self.body.upper_torso.len() < TORSO_MAX_SLOTS,
+            GearType::LegArmor => self.body.lower_torso.len() < LEGS_MAX_SLOTS,
+            GearType::Boots => self.body.feet.len() < FEET_MAX_SLOTS,
+            GearType::Gloves => self.body.hands.len() < HAND_MAX_COUNT,
+    
+            GearType::Shield => self.body.left_hand.len() < 1,
+
+            // The back can hold Backpack, Quiver, Cape, etc.
+            GearType::PetDrone => *self.body.back == 0_u256,
+    
+            GearType::BluntWeapon
+            | GearType::Sword
+            | GearType::Bow
+            | GearType::Polearm
+            | GearType::HeavyFirearms => {
+                self.body.right_hand.len() < 1 || self.body.left_hand.len() < 1
+            },
+    
+            GearType::Firearm => {
+                let waist = self.body.waist;
+                if waist.len() >= WAIST_MAX_SLOTS {
+                    return false;
+                }
+    
+                // count how many of same GearType exist in waist
+                let mut count = 0;
+                let mut i = 0;
+                while i < waist.len() {
+                    let item = *waist.at(i);
+                    if parse_id(item) == gear_type {
+                        count = count + 1;
+                    }
+                    i = i + 1;
+                };
+                count < MAX_SAME_TYPE_IN_WAIST
+            },
+    
+            GearType::Weapon => {
+                self.equipped.len() < *self.max_equip_slot
+            },
+    
+            GearType::Vehicle => true, // yet to implement vehicle logic
+            GearType::None => false,
+        }
     }
+    
+
 
 
     fn is_equipped(self: Player, type_id: u128) -> u256 {
@@ -156,8 +219,8 @@ pub impl PlayerImpl of PlayerTrait {
             i = i + 1;
         };
 
-        if !found && get_high(self.back) == type_id {
-            result = self.back;
+        if !found && get_high(self.body.back) == type_id {
+            result = self.body.back;
         }
 
         result
@@ -182,6 +245,9 @@ fn erc1155mint(contract_address: ContractAddress) -> IERC1155MintableDispatcher 
 
 pub mod Errors {
     pub const ZERO_PLAYER: felt252 = 'ZERO PLAYER';
+    pub const INVALID_ITEM_ID: felt252 = 'INVALID ITEM ID';
+    pub const CANNOT_EQUIP: felt252 = 'CANNOT EQUIP';
+    pub const INSUFFICIENT_SLOTS: felt252 = 'INSUFFICIENT EQUIP SLOTS';
 }
 
 // Helper function to get the high 128 bits from a u256
