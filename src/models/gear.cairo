@@ -25,10 +25,23 @@ pub struct Gear {
     pub max_upgrade_level: u64,
 }
 
+
 #[derive(Drop, Copy, Serde, PartialEq, Default)]
 pub enum GearType {
     #[default]
     None,
+    Weapon, // 0x1
+    // ArmorTypes -- 0x2xxx
+    Helmet, // 0x2000
+    ChestArmor, // 0x2001
+    LegArmor, // 0x2002
+    Boots, // 0x2003
+    Gloves, // 0x2004
+    Shield, // 0x2005
+    // Types of Vehicles -- 0x3xxxx
+    Vehicle, // 0x30000
+    // Pets/Drones -- 0x8xxxxx
+    PetDrone // 0x800000
 }
 
 #[derive(Drop, Copy, Serde, Default)]
@@ -40,12 +53,22 @@ pub struct GearProperties {
 // for now, all items would implement this trait
 // move this trait and it's impl to `helpers/gear.cairo`
 
-pub trait GearTrait {
-    fn with_id(id: u256) -> Gear;
-    fn is_upgradeable(ref self: Gear) -> bool;
-    fn forge(
-        items: Array<u256>,
-    ) -> u256; // can only be implemented on specific ids. Might invoke the worldstorage if necessary.
-    fn is_fungible(id: u256);
-    fn get_output();
+#[generate_trait]
+pub impl GearImpl of GearTrait {
+    fn output(self: @Gear, upgraded_level: u64) -> u256 {
+        // TODO: calculation for output based on upgraded level
+        1000000
+    }
 }
+// pub trait GearTrait {
+//     fn with_id(id: u256) -> Gear;
+//     fn is_upgradeable(ref self: Gear) -> bool;
+//     fn forge(
+//         items: Array<u256>,
+//     ) -> u256; // can only be implemented on specific ids. Might invoke the worldstorage if
+//     necessary.
+//     fn is_fungible(id: u256);
+//     fn output(self: @Gear, value: u256);
+// }
+
+

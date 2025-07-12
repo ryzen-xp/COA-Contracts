@@ -7,7 +7,7 @@ use crate::types::player::{PlayerRank, PlayerRankTrait};
 use crate::types::base::{CREDITS};
 use dojo::world::{WorldStorage};
 
-const DEFAULT_HP: u128 = 500;
+const DEFAULT_HP: u256 = 500;
 const DEFAULT_MAX_EQUIPPABLE_SLOT: u32 = 10;
 
 #[derive(Drop, Clone, Serde, Debug, Default, Introspect)]
@@ -27,8 +27,8 @@ pub struct Body {
 pub struct Player {
     #[key]
     pub id: ContractAddress,
-    pub hp: u128,
-    pub max_hp: u128,
+    pub hp: u256,
+    pub max_hp: u256,
     pub equipped: Array<u256>, // equipped from Player Inventory
     pub max_equip_slot: u32,
     pub rank: PlayerRank,
@@ -86,7 +86,9 @@ pub impl PlayerImpl of PlayerTrait {
     // the systems must check if this item exists before calling this function
     }
 
-    fn is_available(self: @Player, item_id: u256) {}
+    fn is_available(self: @Player, item_id: u256) -> bool {
+        true
+    }
 
     fn use_item(
         ref self: Player, ref world: WorldStorage, id: u256,
