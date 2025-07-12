@@ -11,6 +11,18 @@ pub fn parse_id(id: u256) -> GearType {
     // Match the high bits to determine the gear type
     if category == 0x1 {
         GearType::Weapon
+    } else if category == 0x101 {
+        GearType::BluntWeapon
+    } else if category == 0x102 {
+        GearType::Sword
+    } else if category == 0x103 {
+        GearType::Bow
+    } else if category == 0x104 {
+        GearType::Firearm
+    } else if category == 0x105 {
+        GearType::Polearm   
+    } else if category == 0x106 {
+        GearType::HeavyFirearms
     } else if category == 0x2000 {
         GearType::Helmet
     } else if category == 0x2001 {
