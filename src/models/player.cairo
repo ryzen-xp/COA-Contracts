@@ -186,7 +186,52 @@ pub impl PlayerImpl of PlayerTrait {
         }
     }
     
+    fn equip(ref self: Player, item_id: u256) {
+        self.check();
+        assert(item_id.is_non_zero(), Errors::INVALID_ITEM_ID);
+        
+        // check if the item is equippable
+        assert(self.is_equippable(item_id), Errors::CANNOT_EQUIP);
 
+        // check if the player has enough slots to equip this item
+        assert(self.equipped.len() < self.max_equip_slot, Errors::INSUFFICIENT_SLOTS);
+
+        let gear_type = parse_id(item_id);
+
+        match gear_type {
+            GearType::Helmet => self.body.head = item_id,
+            GearType::Gloves => self.body.hands.append(item_id),
+            GearType::Boots => self.body.feet.append(item_id),
+            GearType::Shield => self.body.left_hand.append(item_id),
+            GearType::BluntWeapon | GearType::Sword | GearType::Bow |
+            GearType::Polearm | GearType::HeavyFirearms => {
+                if self.body.right_hand.len() < 1 {
+                    self.body.right_hand.append(item_id);
+                } else {
+                    self.body.left_hand.append(item_id);
+                }
+            },
+            GearType::Firearm => {
+                self.body.waist.append(item_id);
+            },
+            GearType::Weapon => {
+                self.equipped.append(item_id);
+            },
+
+            // can Cape, Quiver, BackPack, etc.
+            GearType::PetDrone => {
+                self.body.back = item_id;
+            },
+
+            GearType::ChestArmor => self.body.upper_torso.append(item_id),
+            GearType::LegArmor => self.body.lower_torso.append(item_id),
+            GearType::Vehicle => {}, // Handle vehicle logic here
+            _ => { // Do nothing
+            },
+        }
+
+        self.equipped.append(item_id);
+    }
 
 
     fn is_equipped(self: Player, type_id: u128) -> u256 {
