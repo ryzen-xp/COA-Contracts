@@ -30,10 +30,9 @@ pub struct Body {
     pub lower_torso: Array<u256>,
     pub back: u256, // hangables, but it's usually just an item, leave it one for now.
     pub waist: Array<u256>, // Max 8 slots for now.
-    pub feet: Array<u256>, // For Boots
-
+    pub feet: Array<u256> // For Boots
     // Active non-body-worn gear
-    // pub active_vehicle: u256,
+// pub active_vehicle: u256,
 }
 
 #[dojo::model]
@@ -63,7 +62,7 @@ pub impl PlayerImpl of PlayerTrait {
             self.max_equip_slot = DEFAULT_MAX_EQUIPPABLE_SLOT;
             self.rank = Default::default();
             self.next_rank_in = self.rank.compute_max_val(); // change this
-            self.body = Default::default(); 
+            self.body = Default::default();
         }
     }
 
@@ -136,34 +135,26 @@ pub impl PlayerImpl of PlayerTrait {
 
     fn is_equippable(self: @Player, item_id: u256) -> bool {
         let gear_type = parse_id(item_id);
-    
+
         match gear_type {
             GearType::Helmet => *self.body.head == 0_u256,
-    
             GearType::ChestArmor => self.body.upper_torso.len() < TORSO_MAX_SLOTS,
             GearType::LegArmor => self.body.lower_torso.len() < LEGS_MAX_SLOTS,
             GearType::Boots => self.body.feet.len() < FEET_MAX_SLOTS,
             GearType::Gloves => self.body.hands.len() < HAND_MAX_COUNT,
-    
             GearType::Shield => self.body.left_hand.len() < 1,
-
             // The back can hold Backpack, Quiver, Cape, etc.
             GearType::PetDrone => *self.body.back == 0_u256,
-    
-            GearType::BluntWeapon
-            | GearType::Sword
-            | GearType::Bow
-            | GearType::Polearm
-            | GearType::HeavyFirearms => {
+            GearType::BluntWeapon | GearType::Sword | GearType::Bow | GearType::Polearm |
+            GearType::HeavyFirearms => {
                 self.body.right_hand.len() < 1 || self.body.left_hand.len() < 1
             },
-    
             GearType::Firearm => {
                 let waist = self.body.waist;
                 if waist.len() >= WAIST_MAX_SLOTS {
                     return false;
                 }
-    
+
                 // count how many of same GearType exist in waist
                 let mut count = 0;
                 let mut i = 0;
@@ -176,20 +167,16 @@ pub impl PlayerImpl of PlayerTrait {
                 };
                 count < MAX_SAME_TYPE_IN_WAIST
             },
-    
-            GearType::Weapon => {
-                self.equipped.len() < *self.max_equip_slot
-            },
-    
+            GearType::Weapon => { self.equipped.len() < *self.max_equip_slot },
             GearType::Vehicle => true, // yet to implement vehicle logic
             GearType::None => false,
         }
     }
-    
+
     fn equip(ref self: Player, item_id: u256) {
         self.check();
         assert(item_id.is_non_zero(), Errors::INVALID_ITEM_ID);
-        
+
         // check if the item is equippable
         assert(self.is_equippable(item_id), Errors::CANNOT_EQUIP);
 
@@ -203,26 +190,18 @@ pub impl PlayerImpl of PlayerTrait {
             GearType::Gloves => self.body.hands.append(item_id),
             GearType::Boots => self.body.feet.append(item_id),
             GearType::Shield => self.body.left_hand.append(item_id),
-            GearType::BluntWeapon | GearType::Sword | GearType::Bow |
-            GearType::Polearm | GearType::HeavyFirearms => {
+            GearType::BluntWeapon | GearType::Sword | GearType::Bow | GearType::Polearm |
+            GearType::HeavyFirearms => {
                 if self.body.right_hand.len() < 1 {
                     self.body.right_hand.append(item_id);
                 } else {
                     self.body.left_hand.append(item_id);
                 }
             },
-            GearType::Firearm => {
-                self.body.waist.append(item_id);
-            },
-            GearType::Weapon => {
-                self.equipped.append(item_id);
-            },
-
+            GearType::Firearm => { self.body.waist.append(item_id); },
+            GearType::Weapon => { self.equipped.append(item_id); },
             // can Cape, Quiver, BackPack, etc.
-            GearType::PetDrone => {
-                self.body.back = item_id;
-            },
-
+            GearType::PetDrone => { self.body.back = item_id; },
             GearType::ChestArmor => self.body.upper_torso.append(item_id),
             GearType::LegArmor => self.body.lower_torso.append(item_id),
             GearType::Vehicle => {}, // Handle vehicle logic here

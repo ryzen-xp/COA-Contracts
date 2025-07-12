@@ -20,7 +20,7 @@ pub fn parse_id(id: u256) -> GearType {
     } else if category == 0x104 {
         GearType::Firearm
     } else if category == 0x105 {
-        GearType::Polearm   
+        GearType::Polearm
     } else if category == 0x106 {
         GearType::HeavyFirearms
     } else if category == 0x2000 {
