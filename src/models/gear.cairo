@@ -41,7 +41,7 @@ pub enum GearType {
     // Types of Vehicles -- 0x3xxxx
     Vehicle, // 0x30000
     // Pets/Drones -- 0x8xxxxx
-    PetDrone, // 0x800000
+    PetDrone // 0x800000
 }
 
 #[derive(Drop, Copy, Serde, Default)]
