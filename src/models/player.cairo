@@ -48,7 +48,7 @@ pub struct Player {
     pub level: u256, // this level is broken down from exps, usuable for boosters
     pub faction: felt252,
     pub next_rank_in: u64,
-    pub body: Body, // body parts that can be equipped, like hands, legs, torso, etc.
+    pub body: Body,
 }
 
 #[generate_trait]
