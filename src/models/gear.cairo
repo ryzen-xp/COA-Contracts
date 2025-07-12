@@ -25,11 +25,23 @@ pub struct Gear {
     pub max_upgrade_level: u64,
 }
 
-// #[derive(Drop, Copy, Serde, PartialEq, Default)]
-// pub enum GearType {
-//     #[default]
-//     None,
-// }
+#[derive(Drop, Copy, Serde, PartialEq, Introspect)]
+pub enum GearType {
+    #[default]
+    None,
+    Weapon, // 0x1
+    // ArmorTypes -- 0x2xxx
+    Helmet, // 0x2000
+    ChestArmor, // 0x2001
+    LegArmor, // 0x2002
+    Boots, // 0x2003
+    Gloves, // 0x2004
+    Shield, // 0x2005
+    // Types of Vehicles -- 0x3xxxx
+    Vehicle, // 0x30000
+    // Pets/Drones -- 0x8xxxxx
+    PetDrone, // 0x800000
+}
 
 #[derive(Drop, Copy, Serde, Default)]
 pub struct GearProperties {
