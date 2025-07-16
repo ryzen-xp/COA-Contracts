@@ -23,6 +23,8 @@ pub fn parse_id(id: u256) -> GearType {
         GearType::Polearm
     } else if category == 0x106 {
         GearType::HeavyFirearms
+    } else if category == 0x107 {
+        GearType::Explosives
     } else if category == 0x2000 {
         GearType::Helmet
     } else if category == 0x2001 {
@@ -38,13 +40,15 @@ pub fn parse_id(id: u256) -> GearType {
     } else if category == 0x30000 {
         GearType::Vehicle
     } else if category == 0x800000 {
-        GearType::PetDrone
+        GearType::Pet
+    } else if category == 0x800001 {
+        GearType::Drone
     } else {
         GearType::None // Fungible tokens or invalid
     }
 }
 
-fn count_gear_in_array(array: Array<u256>, gear_type: GearType) -> u32 {
+pub fn count_gear_in_array(array: Array<u256>, gear_type: GearType) -> u32 {
     let mut count = 0;
     let mut i = 0;
     while i < array.len() {
@@ -57,14 +61,20 @@ fn count_gear_in_array(array: Array<u256>, gear_type: GearType) -> u32 {
 }
 
 
-fn contains_gear_type(array: Array<u256>, gear_type: GearType) -> bool {
+pub fn contains_gear_type(array: Array<u256>, gear_type: GearType) -> bool {
+    let mut found = false;
     let mut i = 0;
+
     while i < array.len() {
         if parse_id(*array.at(i)) == gear_type {
-            return true;
+            found = true;
+            // break early if found
+            i = array.len(); // force exit loop
+        } else {
+            i += 1;
         }
-        i += 1;
     };
-    false
+
+    found
 }
 
