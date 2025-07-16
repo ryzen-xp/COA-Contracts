@@ -43,3 +43,28 @@ pub fn parse_id(id: u256) -> GearType {
         GearType::None // Fungible tokens or invalid
     }
 }
+
+fn count_gear_in_array(array: Array<u256>, gear_type: GearType) -> u32 {
+    let mut count = 0;
+    let mut i = 0;
+    while i < array.len() {
+        if parse_id(*array.at(i)) == gear_type {
+            count += 1;
+        }
+        i += 1;
+    };
+    count
+}
+
+
+fn contains_gear_type(array: Array<u256>, gear_type: GearType) -> bool {
+    let mut i = 0;
+    while i < array.len() {
+        if parse_id(*array.at(i)) == gear_type {
+            return true;
+        }
+        i += 1;
+    };
+    false
+}
+
