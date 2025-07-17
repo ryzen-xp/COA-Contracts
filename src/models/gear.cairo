@@ -30,7 +30,16 @@ pub struct Gear {
 pub enum GearType {
     #[default]
     None,
+    // General Weapon category prefix: 0x1
     Weapon, // 0x1
+    // WeaponSubTypes -- 0x1xx
+    BluntWeapon, // 0x101 - (e.g., Maces, hammers, clubs, axes)
+    Sword, // 0x102 - (e.g., Katanas, greatswords, longswords, shortswords, daggers, knives)
+    Bow, // 0x103 - (e.g., Compound bows, crossbows, longbows, shortbows)
+    Firearm, // 0x104 - (e.g., Pistols, rifles, shotguns, SMGs (submachine guns))
+    Polearm, // 0x105 - (e.g., Spears, lances, halberds, pikes, glaives)
+    HeavyFirearms, // 0x106 (e.g., LMGs, Rocket Launchers, Grenade Launchers)
+    Explosives, // 0x107 (e.g., Grenades, C4, Mines, Explosive Arrows)
     // ArmorTypes -- 0x2xxx
     Helmet, // 0x2000
     ChestArmor, // 0x2001
@@ -38,10 +47,11 @@ pub enum GearType {
     Boots, // 0x2003
     Gloves, // 0x2004
     Shield, // 0x2005
-    // Types of Vehicles -- 0x3xxxx
+    // VehicleTypes -- 0x3xxxx
     Vehicle, // 0x30000
     // Pets/Drones -- 0x8xxxxx
-    PetDrone // 0x800000
+    Pet, // 0x800000
+    Drone // 0x800001
 }
 
 #[derive(Drop, Copy, Serde, Default)]
