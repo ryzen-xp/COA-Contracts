@@ -46,6 +46,7 @@ pub struct Player {
     pub max_equip_slot: u32,
     pub rank: PlayerRank,
     pub level: u256, // this level is broken down from exps, usuable for boosters
+    pub xp: u256,
     pub faction: felt252,
     pub next_rank_in: u64,
     pub body: Body,

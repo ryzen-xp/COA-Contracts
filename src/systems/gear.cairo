@@ -70,16 +70,21 @@ pub mod GearActions {
         // These functions might be reserved for players within a specific faction
 
         // this function forges and creates a new item id based
+        // normally, this function should be called only when the player is in a forging place.
         fn forge(
             ref self: ContractState, item_ids: Array<u256>,
-        ) { // should create a new asset. Perhaps deduct credits from the player.
-        // 0
+        ) -> u256 { // should create a new asset. Perhaps deduct credits from the player.
+            0
         }
 
         fn awaken(ref self: ContractState, exchange: Array<u256>) {}
 
         fn can_be_awakened(self: @ContractState, item_ids: Array<u256>) -> Span<bool> {
             array![].span()
+        }
+
+        fn pick_items(ref self: ContractState, item_id: Array<u256>) -> Array<u256> {
+            array![]
         }
     }
 

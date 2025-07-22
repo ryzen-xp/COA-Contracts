@@ -23,6 +23,8 @@ pub struct Gear {
     pub in_action: bool, // this translates to if this gear is ready to be used... just like a gun in hand, rather than a docked gun. This field would be used in important checks in the future.
     pub upgrade_level: u64,
     pub max_upgrade_level: u64,
+    pub min_xp_needed: u256,
+    pub spawned: bool,
 }
 
 

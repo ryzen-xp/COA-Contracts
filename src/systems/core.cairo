@@ -4,7 +4,7 @@
 /// Spawn tournamemnts and side quests here, if necessary.
 #[starknet::interface]
 pub trait ICore<TContractState> {
-    fn spawn_items(ref self: TContractState, item_ids: Array<u256>);
+    fn spawn_items(ref self: TContractState, item_types: Array<u256>);
     // move to market only items that have been spawned.
     // if caller is admin, check spawned items and relocate
     // if caller is player,
@@ -25,7 +25,7 @@ pub mod CoreActions {
 
     #[abi(embed_v0)]
     pub impl CoreActionsImpl of super::ICore<ContractState> {
-        fn spawn_items(ref self: ContractState, item_ids: Array<u256>) {}
+        fn spawn_items(ref self: ContractState, item_types: Array<u256>) {}
         // move to market only items that have been spawned.
         // if caller is admin, check spawned items and relocate
         // if caller is player,

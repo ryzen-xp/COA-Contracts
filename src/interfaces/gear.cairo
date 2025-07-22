@@ -33,12 +33,19 @@ pub trait IGear<TContractState> {
     fn auction(ref self: TContractState, item_ids: Array<u256>);
     fn dismantle(ref self: TContractState, item_ids: Array<u256>);
     fn transfer(ref self: TContractState, item_ids: Array<u256>);
+    // This is an admin function, might take in more params to grant a specific player a gear.
     fn grant(ref self: TContractState, asset: GearType);
 
     // These functions might be reserved for players within a specific faction
 
     // this function forges and creates a new item id based
-    fn forge(ref self: TContractState, item_ids: Array<u256>);
+    fn forge(ref self: TContractState, item_ids: Array<u256>) -> u256;
     fn awaken(ref self: TContractState, exchange: Array<u256>);
     fn can_be_awakened(self: @TContractState, item_ids: Array<u256>) -> Span<bool>;
+    fn pick_items(ref self: TContractState, item_id: Array<u256>) -> Array<u256>; // returns an array of items that were picked
+    
+    // adds an item to the list of items 
 }
+
+/// TODO: Implement gear levels: Rare, Mythical, etc... these levels would determine its base stats
+/// and the max upgradeable stats.
