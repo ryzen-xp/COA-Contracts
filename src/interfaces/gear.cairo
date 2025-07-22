@@ -42,10 +42,11 @@ pub trait IGear<TContractState> {
     fn forge(ref self: TContractState, item_ids: Array<u256>) -> u256;
     fn awaken(ref self: TContractState, exchange: Array<u256>);
     fn can_be_awakened(self: @TContractState, item_ids: Array<u256>) -> Span<bool>;
-    fn pick_items(ref self: TContractState, item_id: Array<u256>) -> Array<u256>; // returns an array of items that were picked
-    
-    // adds an item to the list of items 
+    fn pick_items(
+        ref self: TContractState, item_id: Array<u256>,
+    ) -> Array<u256>; // returns an array of items that were picked
+    // adds an item to the list of items
 }
-
 /// TODO: Implement gear levels: Rare, Mythical, etc... these levels would determine its base stats
 /// and the max upgradeable stats.
+
