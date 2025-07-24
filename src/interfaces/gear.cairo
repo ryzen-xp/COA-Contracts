@@ -50,3 +50,4 @@ pub trait IGear<TContractState> {
 /// TODO: Implement gear levels: Rare, Mythical, etc... these levels would determine its base stats
 /// and the max upgradeable stats.
 
+

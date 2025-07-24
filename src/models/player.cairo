@@ -52,6 +52,41 @@ pub struct Player {
     pub body: Body,
 }
 
+#[derive(Drop, Copy, Serde)]
+#[dojo::event]
+pub struct DamageDealt {
+    #[key]
+    pub attacker: ContractAddress,
+    #[key]
+    pub target: u256,
+    pub damage: u256,
+    pub target_type: felt252,
+}
+
+#[derive(Drop, Copy, Serde)]
+#[dojo::event]
+pub struct PlayerDamaged {
+    #[key]
+    pub player_id: u256,
+    pub damage_received: u256,
+    pub remaining_hp: u256,
+}
+
+#[derive(Copy, Drop, Serde)]
+pub struct FactionStats {
+    pub damage_multiplier: u256,
+    pub defense_multiplier: u256,
+    pub speed_multiplier: u256,
+}
+
+#[derive(Copy, Drop, Serde)]
+#[dojo::event]
+pub struct PlayerInitialized {
+    #[key]
+    pub player_id: ContractAddress,
+    pub faction: felt252,
+}
+
 #[generate_trait]
 pub impl PlayerImpl of PlayerTrait {
     fn init(ref self: Player, faction: felt252) {
