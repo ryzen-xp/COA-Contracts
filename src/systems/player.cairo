@@ -21,7 +21,9 @@ pub trait IPlayer<TContractState> {
 pub mod PlayerActions {
     use core::num::traits::Zero;
     use starknet::{ContractAddress, get_caller_address};
-    use crate::models::player::{Player, PlayerTrait};
+    use crate::models::player::{
+        Player, PlayerTrait, DamageDealt, PlayerDamaged, FactionStats, PlayerInitialized,
+    };
     use crate::models::gear::{Gear, GearTrait};
     use crate::models::armour::{Armour, ArmourTrait};
     use crate::erc1155::erc1155::{
@@ -30,6 +32,7 @@ pub mod PlayerActions {
     };
     use super::IPlayer;
     use dojo::model::{ModelStorage};
+    use dojo::event::EventStorage;
 
     // Faction types as felt252 constants
     const CHAOS_MERCENARIES: felt252 = 'CHAOS_MERCENARIES';
@@ -48,41 +51,8 @@ pub mod PlayerActions {
     const ARMOR_GLOVES: u128 = 0x2004;
     const ARMOR_SHIELD: u128 = 0x2005;
 
-
-    #[derive(Copy, Drop, Serde)]
-    struct FactionStats {
-        damage_multiplier: u256,
-        defense_multiplier: u256,
-        speed_multiplier: u256,
-    }
-
     // const GEAR_
     const MIN_THRESHOLD: u32 = 80;
-
-    #[event]
-    #[derive(Drop, starknet::Event)]
-    enum Event {
-        DamageDealt: DamageDealt,
-        PlayerDamaged: PlayerDamaged,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct DamageDealt {
-        #[key]
-        attacker: ContractAddress,
-        #[key]
-        target: u256,
-        damage: u256,
-        target_type: felt252,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct PlayerDamaged {
-        #[key]
-        player_id: u256,
-        damage_received: u256,
-        remaining_hp: u256,
-    }
 
     fn dojo_init(
         ref self: ContractState, admin: ContractAddress, default_amount_of_credits: u256,
@@ -94,9 +64,17 @@ pub mod PlayerActions {
     #[abi(embed_v0)]
     impl PlayerActionsImpl of IPlayer<ContractState> {
         fn new(ref self: ContractState, faction: felt252) { // create the player
-        // and call mint
-        // maybe in the future, you implement a `mint_default()`
-        // spawn player at some random location.
+            let mut world = self.world_default();
+            let caller = get_caller_address();
+            let mut player: Player = world.read_model(caller);
+
+            if player.max_hp == 0 {
+                return;
+            }
+            player.init(faction);
+            world.write_model(@player);
+            let event = PlayerInitialized { player_id: caller, faction };
+            world.emit_event(@event);
         }
 
         fn deal_damage(
@@ -126,7 +104,7 @@ pub mod PlayerActions {
 
             // or recieve damage should probably be an internal trait for now.
 
-            let world = self.world_default();
+            let mut world = self.world_default();
             let caller = get_caller_address();
             // get the player
             let player: Player = world.read_model(caller);
@@ -161,19 +139,10 @@ pub mod PlayerActions {
 
                 // Apply the damage
                 self.damage_target(target_id, target_type, total_damage);
-
-                self
-                    .emit(
-                        Event::DamageDealt(
-                            DamageDealt {
-                                attacker: caller,
-                                target: target_id,
-                                damage: total_damage,
-                                target_type,
-                            },
-                        ),
-                    );
-
+                let event = DamageDealt {
+                    attacker: caller, target: target_id, damage: total_damage, target_type,
+                };
+                world.emit_event(@event);
                 target_index += 1;
             };
         }
@@ -241,12 +210,9 @@ pub mod PlayerActions {
                         self.update_object_quantity(player_id, object_id, balance);
                     }
                 }
-
                 i += 1;
             };
-
             // Emit an event indicating the refresh was completed
-            self.emit_refresh_event(player_id);
         }
     }
 
@@ -255,6 +221,7 @@ pub mod PlayerActions {
         fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
             self.world(@"coa")
         }
+
         fn get_faction_stats(self: @ContractState, faction: felt252) -> FactionStats {
             if faction == CHAOS_MERCENARIES {
                 FactionStats {
@@ -422,17 +389,9 @@ pub mod PlayerActions {
                 }
 
                 world.write_model(@player);
-
-                self
-                    .emit(
-                        Event::PlayerDamaged(
-                            PlayerDamaged {
-                                player_id,
-                                damage_received: damage - remaining_damage,
-                                remaining_hp: player.hp,
-                            },
-                        ),
-                    );
+                let damage_received = damage - remaining_damage;
+                let event = PlayerDamaged { player_id, damage_received, remaining_hp: player.hp };
+                world.emit_event(@event);
             }
         }
 
@@ -441,12 +400,6 @@ pub mod PlayerActions {
             // For now, we return a placeholder address
             // This should be replaced with the actual ERC1155 contract address
             starknet::contract_address_const::<0x0>()
-        }
-
-        fn emit_refresh_event(
-            ref self: ContractState, player_id: u256,
-        ) { // In a real implementation, this would emit an event
-        // For now, this is just a placeholder
         }
 
         fn get_game_object_ids(self: @ContractState) -> Array<u256> {
