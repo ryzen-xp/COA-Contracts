@@ -40,7 +40,9 @@ pub mod CoreActions {
 
     #[abi(embed_v0)]
     pub impl CoreActionsImpl of super::ICore<ContractState> {
-        fn spawn_items(ref self: ContractState, item_types: Array<u256>) {}
+        fn spawn_items(ref self: ContractState, item_types: Array<u256>) {// assert the caller is the admin.
+        // and the items should be an array of GearDetails...
+        }
         // move to market only items that have been spawned.
         // if caller is admin, check spawned items and relocate
         // if caller is player,

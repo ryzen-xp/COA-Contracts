@@ -125,252 +125,275 @@ pub mod GearActions {
         fn _initialize_gear_assets(ref self: ContractState, ref world: WorldStorage) {
             // Weapons - using ERC1155 token IDs as primary keys
             let weapon_1_id = u256 { low: 0x0001, high: 0x1 };
-            let weapon_1_gear = Gear {
-                id: generate_id(GEAR, ref world), // WEAPON_1 from ERC1155
-                item_type: 'WEAPON',
-                asset_id: weapon_1_id, // u256.high for weapons
-                variation_ref: 1,
-                total_count: 1,
-                in_action: false,
-                upgrade_level: 0,
-                max_upgrade_level: 10,
-            };
-            world.write_model(@weapon_1_gear);
+            // let weapon_1_gear = Gear {
+            //     id: generate_id(GEAR, ref world), // WEAPON_1 from ERC1155
+            //     item_type: 'WEAPON',
+            //     asset_id: weapon_1_id, // u256.high for weapons
+            //     variation_ref: 1,
+            //     total_count: 1,
+            //     in_action: false,
+            //     upgrade_level: 0,
+            //     max_upgrade_level: 10,
+            //     mix_xp_needed: 0,
+            // };
+            // world.write_model(@weapon_1_gear);
 
-            // Weapon 1 stats
-            let weapon_1_stats = crate::models::weapon_stats::WeaponStats {
-                asset_id: weapon_1_id,
-                damage: 45,
-                range: 100,
-                accuracy: 85,
-                fire_rate: 15,
-                ammo_capacity: 30,
-                reload_time: 3,
-            };
-            world.write_model(@weapon_1_stats);
+            // // Weapon 1 stats
+            // let weapon_1_stats = crate::models::weapon_stats::WeaponStats {
+            //     asset_id: weapon_1_id,
+            //     damage: 45,
+            //     range: 100,
+            //     accuracy: 85,
+            //     fire_rate: 15,
+            //     ammo_capacity: 30,
+            //     reload_time: 3,
+            // };
+            // world.write_model(@weapon_1_stats);
 
-            let weapon_2_id = u256 { low: 0x0002, high: 0x1 };
-            let weapon_2_gear = Gear {
-                id: generate_id(GEAR, ref world), // WEAPON_2 from ERC1155
-                item_type: 'WEAPON',
-                asset_id: weapon_2_id,
-                variation_ref: 2,
-                total_count: 1,
-                in_action: false,
-                upgrade_level: 0,
-                max_upgrade_level: 10,
-            };
-            world.write_model(@weapon_2_gear);
+            // let weapon_2_id = u256 { low: 0x0002, high: 0x1 };
+            // let weapon_2_gear = Gear {
+            //     id: generate_id(GEAR, ref world), // WEAPON_2 from ERC1155
+            //     item_type: 'WEAPON',
+            //     asset_id: weapon_2_id,
+            //     variation_ref: 2,
+            //     total_count: 1,
+            //     in_action: false,
+            //     upgrade_level: 0,
+            //     max_upgrade_level: 10,
+            //     min_xp_needed: 0,
+            //     spawned: false,
+            // };
+            // world.write_model(@weapon_2_gear);
 
-            // Weapon 2 stats
-            let weapon_2_stats = crate::models::weapon_stats::WeaponStats {
-                asset_id: weapon_2_id,
-                damage: 60,
-                range: 80,
-                accuracy: 90,
-                fire_rate: 10,
-                ammo_capacity: 20,
-                reload_time: 4,
-            };
-            world.write_model(@weapon_2_stats);
+            // // Weapon 2 stats
+            // let weapon_2_stats = crate::models::weapon_stats::WeaponStats {
+            //     asset_id: weapon_2_id,
+            //     damage: 60,
+            //     range: 80,
+            //     accuracy: 90,
+            //     fire_rate: 10,
+            //     ammo_capacity: 20,
+            //     reload_time: 4,
+            // };
+            // world.write_model(@weapon_2_stats);
 
-            // Armor Types
-            let helmet_id = u256 { low: 0x0001, high: 0x2000 };
-            let helmet_gear = Gear {
-                id: generate_id(GEAR, ref world), // HELMET from ERC1155
-                item_type: 'ARMOR',
-                asset_id: helmet_id, // u256.high for helmet
-                variation_ref: 1,
-                total_count: 1,
-                in_action: false,
-                upgrade_level: 0,
-                max_upgrade_level: 8,
-            };
-            world.write_model(@helmet_gear);
+            // // Armor Types
+            // let helmet_id = u256 { low: 0x0001, high: 0x2000 };
+            // let helmet_gear = Gear {
+            //     id: generate_id(GEAR, ref world), // HELMET from ERC1155
+            //     item_type: 'ARMOR',
+            //     asset_id: helmet_id, // u256.high for helmet
+            //     variation_ref: 1,
+            //     total_count: 1,
+            //     in_action: false,
+            //     upgrade_level: 0,
+            //     max_upgrade_level: 8,
+            //     min_xp_needed: 0,
+            //     spawned: false,
+            // };
+            // world.write_model(@helmet_gear);
 
-            // Helmet stats
-            let helmet_stats = crate::models::armor_stats::ArmorStats {
-                asset_id: helmet_id, defense: 25, durability: 100, weight: 2, slot_type: 'HELMET',
-            };
-            world.write_model(@helmet_stats);
+            // // Helmet stats
+            // let helmet_stats = crate::models::armor_stats::ArmorStats {
+            //     asset_id: helmet_id, defense: 25, durability: 100, weight: 2, slot_type:
+            //     'HELMET',
+            // };
+            // world.write_model(@helmet_stats);
 
-            let chest_armor_id = u256 { low: 0x0001, high: 0x2001 };
-            let chest_armor_gear = Gear {
-                id: generate_id(GEAR, ref world), // CHEST_ARMOR from ERC1155
-                item_type: 'ARMOR',
-                asset_id: chest_armor_id, // u256.high for chest armor
-                variation_ref: 1,
-                total_count: 1,
-                in_action: false,
-                upgrade_level: 0,
-                max_upgrade_level: 8,
-            };
-            world.write_model(@chest_armor_gear);
+            // let chest_armor_id = u256 { low: 0x0001, high: 0x2001 };
+            // let chest_armor_gear = Gear {
+            //     id: generate_id(GEAR, ref world), // CHEST_ARMOR from ERC1155
+            //     item_type: 'ARMOR',
+            //     asset_id: chest_armor_id, // u256.high for chest armor
+            //     variation_ref: 1,
+            //     total_count: 1,
+            //     in_action: false,
+            //     upgrade_level: 0,
+            //     max_upgrade_level: 8,
+            //     min_xp_needed: 0,
+            //     spawned: false,
+            // };
+            // world.write_model(@chest_armor_gear);
 
-            // Chest armor stats
-            let chest_armor_stats = crate::models::armor_stats::ArmorStats {
-                asset_id: chest_armor_id,
-                defense: 50,
-                durability: 150,
-                weight: 8,
-                slot_type: 'CHEST',
-            };
-            world.write_model(@chest_armor_stats);
+            // // Chest armor stats
+            // let chest_armor_stats = crate::models::armor_stats::ArmorStats {
+            //     asset_id: chest_armor_id,
+            //     defense: 50,
+            //     durability: 150,
+            //     weight: 8,
+            //     slot_type: 'CHEST',
+            // };
+            // world.write_model(@chest_armor_stats);
 
-            let leg_armor_id = u256 { low: 0x0001, high: 0x2002 };
-            let leg_armor_gear = Gear {
-                id: generate_id(GEAR, ref world), // LEG_ARMOR from ERC1155
-                item_type: 'ARMOR',
-                asset_id: leg_armor_id, // u256.high for leg armor
-                variation_ref: 1,
-                total_count: 1,
-                in_action: false,
-                upgrade_level: 0,
-                max_upgrade_level: 8,
-            };
-            world.write_model(@leg_armor_gear);
+            // let leg_armor_id = u256 { low: 0x0001, high: 0x2002 };
+            // let leg_armor_gear = Gear {
+            //     id: generate_id(GEAR, ref world), // LEG_ARMOR from ERC1155
+            //     item_type: 'ARMOR',
+            //     asset_id: leg_armor_id, // u256.high for leg armor
+            //     variation_ref: 1,
+            //     total_count: 1,
+            //     in_action: false,
+            //     upgrade_level: 0,
+            //     max_upgrade_level: 8,
+            //     min_xp_needed: 0,
+            //     spawned: false,
+            // };
+            // world.write_model(@leg_armor_gear);
 
-            // Leg armor stats
-            let leg_armor_stats = crate::models::armor_stats::ArmorStats {
-                asset_id: leg_armor_id, defense: 35, durability: 120, weight: 6, slot_type: 'LEGS',
-            };
-            world.write_model(@leg_armor_stats);
+            // // Leg armor stats
+            // let leg_armor_stats = crate::models::armor_stats::ArmorStats {
+            //     asset_id: leg_armor_id, defense: 35, durability: 120, weight: 6, slot_type:
+            //     'LEGS',
+            // };
+            // world.write_model(@leg_armor_stats);
 
-            let boots_id = u256 { low: 0x0001, high: 0x2003 };
-            let boots_gear = Gear {
-                id: generate_id(GEAR, ref world), // BOOTS from ERC1155
-                item_type: 'ARMOR',
-                asset_id: boots_id, // u256.high for boots
-                variation_ref: 1,
-                total_count: 1,
-                in_action: false,
-                upgrade_level: 0,
-                max_upgrade_level: 8,
-            };
-            world.write_model(@boots_gear);
+            // let boots_id = u256 { low: 0x0001, high: 0x2003 };
+            // let boots_gear = Gear {
+            //     id: generate_id(GEAR, ref world), // BOOTS from ERC1155
+            //     item_type: 'ARMOR',
+            //     asset_id: boots_id, // u256.high for boots
+            //     variation_ref: 1,
+            //     total_count: 1,
+            //     in_action: false,
+            //     upgrade_level: 0,
+            //     max_upgrade_level: 8,
+            //     min_xp_needed: 0,
+            //     spawned: false,
+            // };
+            // world.write_model(@boots_gear);
 
-            // Boots stats
-            let boots_stats = crate::models::armor_stats::ArmorStats {
-                asset_id: boots_id, defense: 20, durability: 80, weight: 3, slot_type: 'BOOTS',
-            };
-            world.write_model(@boots_stats);
+            // // Boots stats
+            // let boots_stats = crate::models::armor_stats::ArmorStats {
+            //     asset_id: boots_id, defense: 20, durability: 80, weight: 3, slot_type: 'BOOTS',
+            // };
+            // world.write_model(@boots_stats);
 
-            let gloves_id = u256 { low: 0x0001, high: 0x2004 };
-            let gloves_gear = Gear {
-                id: generate_id(GEAR, ref world), // GLOVES from ERC1155
-                item_type: 'ARMOR',
-                asset_id: gloves_id, // u256.high for gloves
-                variation_ref: 1,
-                total_count: 1,
-                in_action: false,
-                upgrade_level: 0,
-                max_upgrade_level: 8,
-            };
-            world.write_model(@gloves_gear);
+            // let gloves_id = u256 { low: 0x0001, high: 0x2004 };
+            // let gloves_gear = Gear {
+            //     id: generate_id(GEAR, ref world), // GLOVES from ERC1155
+            //     item_type: 'ARMOR',
+            //     asset_id: gloves_id, // u256.high for gloves
+            //     variation_ref: 1,
+            //     total_count: 1,
+            //     in_action: false,
+            //     upgrade_level: 0,
+            //     max_upgrade_level: 8,
+            //     min_xp_needed: 0,
+            //     spawned: true,
+            // };
+            // world.write_model(@gloves_gear);
 
-            // Gloves stats
-            let gloves_stats = crate::models::armor_stats::ArmorStats {
-                asset_id: gloves_id, defense: 15, durability: 60, weight: 1, slot_type: 'GLOVES',
-            };
-            world.write_model(@gloves_stats);
+            // // Gloves stats
+            // let gloves_stats = crate::models::armor_stats::ArmorStats {
+            //     asset_id: gloves_id, defense: 15, durability: 60, weight: 1, slot_type: 'GLOVES',
+            // };
+            // world.write_model(@gloves_stats);
 
-            // Vehicles
-            let vehicle_id = u256 { low: 0x0001, high: 0x30000 };
-            let vehicle_gear = Gear {
-                id: generate_id(GEAR, ref world), // VEHICLE from ERC1155
-                item_type: 'VEHICLE',
-                asset_id: vehicle_id, // u256.high for vehicles
-                variation_ref: 1,
-                total_count: 1,
-                in_action: false,
-                upgrade_level: 0,
-                max_upgrade_level: 5,
-            };
-            world.write_model(@vehicle_gear);
+            // // Vehicles
+            // let vehicle_id = u256 { low: 0x0001, high: 0x30000 };
+            // let vehicle_gear = Gear {
+            //     id: generate_id(GEAR, ref world), // VEHICLE from ERC1155
+            //     item_type: 'VEHICLE',
+            //     asset_id: vehicle_id, // u256.high for vehicles
+            //     variation_ref: 1,
+            //     total_count: 1,
+            //     in_action: false,
+            //     upgrade_level: 0,
+            //     max_upgrade_level: 5,
+            //     min_xp_needed: 0,
+            //     spawned: false,
+            // };
+            // world.write_model(@vehicle_gear);
 
-            // Vehicle 1 stats
-            let vehicle_stats = crate::models::vehicle_stats::VehicleStats {
-                asset_id: vehicle_id,
-                speed: 80,
-                armor: 60,
-                fuel_capacity: 100,
-                cargo_capacity: 500,
-                maneuverability: 70,
-            };
-            world.write_model(@vehicle_stats);
+            // // Vehicle 1 stats
+            // let vehicle_stats = crate::models::vehicle_stats::VehicleStats {
+            //     asset_id: vehicle_id,
+            //     speed: 80,
+            //     armor: 60,
+            //     fuel_capacity: 100,
+            //     cargo_capacity: 500,
+            //     maneuverability: 70,
+            // };
+            // world.write_model(@vehicle_stats);
 
-            let vehicle_2_id = u256 { low: 0x0002, high: 0x30000 };
-            let vehicle_2_gear = Gear {
-                id: generate_id(GEAR, ref world), // VEHICLE_2 from ERC1155
-                item_type: 'VEHICLE',
-                asset_id: vehicle_2_id,
-                variation_ref: 2,
-                total_count: 1,
-                in_action: false,
-                upgrade_level: 0,
-                max_upgrade_level: 5,
-            };
-            world.write_model(@vehicle_2_gear);
+            // let vehicle_2_id = u256 { low: 0x0002, high: 0x30000 };
+            // let vehicle_2_gear = Gear {
+            //     id: generate_id(GEAR, ref world), // VEHICLE_2 from ERC1155
+            //     item_type: 'VEHICLE',
+            //     asset_id: vehicle_2_id,
+            //     variation_ref: 2,
+            //     total_count: 1,
+            //     in_action: false,
+            //     upgrade_level: 0,
+            //     max_upgrade_level: 5,
+            //     min_xp_needed: 0,
+            //     spawned: false,
+            // };
+            // world.write_model(@vehicle_2_gear);
 
-            // Vehicle 2 stats (different variation)
-            let vehicle_2_stats = crate::models::vehicle_stats::VehicleStats {
-                asset_id: vehicle_2_id,
-                speed: 60,
-                armor: 90,
-                fuel_capacity: 150,
-                cargo_capacity: 800,
-                maneuverability: 50,
-            };
-            world.write_model(@vehicle_2_stats);
+            // // Vehicle 2 stats (different variation)
+            // let vehicle_2_stats = crate::models::vehicle_stats::VehicleStats {
+            //     asset_id: vehicle_2_id,
+            //     speed: 60,
+            //     armor: 90,
+            //     fuel_capacity: 150,
+            //     cargo_capacity: 800,
+            //     maneuverability: 50,
+            // };
+            // world.write_model(@vehicle_2_stats);
 
-            // Pets / Drones
-            let pet_1_id = u256 { low: 0x0001, high: 0x800000 };
-            let pet_1_gear = Gear {
-                id: generate_id(GEAR, ref world), // PET_1 from ERC1155
-                item_type: 'PET',
-                asset_id: pet_1_id, // u256.high for pets
-                variation_ref: 1,
-                total_count: 1,
-                in_action: false,
-                upgrade_level: 0,
-                max_upgrade_level: 15,
-            };
-            world.write_model(@pet_1_gear);
+            // // Pets / Drones
+            // let pet_1_id = u256 { low: 0x0001, high: 0x800000 };
+            // let pet_1_gear = Gear {
+            //     id: generate_id(GEAR, ref world), // PET_1 from ERC1155
+            //     item_type: 'PET',
+            //     asset_id: pet_1_id, // u256.high for pets
+            //     variation_ref: 1,
+            //     total_count: 1,
+            //     in_action: false,
+            //     upgrade_level: 0,
+            //     max_upgrade_level: 15,
+            //     min_xp_needed: 0,
+            //     spawned: false,
+            // };
+            // world.write_model(@pet_1_gear);
 
-            // Pet 1 stats
-            let pet_1_stats = crate::models::pet_stats::PetStats {
-                asset_id: pet_1_id,
-                loyalty: 85,
-                intelligence: 75,
-                agility: 90,
-                special_ability: 'STEALTH',
-                energy: 100,
-            };
-            world.write_model(@pet_1_stats);
+            // // Pet 1 stats
+            // let pet_1_stats = crate::models::pet_stats::PetStats {
+            //     asset_id: pet_1_id,
+            //     loyalty: 85,
+            //     intelligence: 75,
+            //     agility: 90,
+            //     special_ability: 'STEALTH',
+            //     energy: 100,
+            // };
+            // world.write_model(@pet_1_stats);
 
-            let pet_2_id = u256 { low: 0x0002, high: 0x800000 };
-            let pet_2_gear = Gear {
-                id: generate_id(GEAR, ref world), // PET_2 from ERC1155
-                item_type: 'PET',
-                asset_id: pet_2_id,
-                variation_ref: 2,
-                total_count: 1,
-                in_action: false,
-                upgrade_level: 0,
-                max_upgrade_level: 15,
-            };
-            world.write_model(@pet_2_gear);
+            // let pet_2_id = u256 { low: 0x0002, high: 0x800000 };
+            // let pet_2_gear = Gear {
+            //     id: generate_id(GEAR, ref world), // PET_2 from ERC1155
+            //     item_type: 'PET',
+            //     asset_id: pet_2_id,
+            //     variation_ref: 2,
+            //     total_count: 1,
+            //     in_action: false,
+            //     upgrade_level: 0,
+            //     max_upgrade_level: 15,
+            //     min_xp_needed: 0,
+            //     spawned: false,
+            // };
+            // world.write_model(@pet_2_gear);
 
             // Pet 2 stats
-            let pet_2_stats = crate::models::pet_stats::PetStats {
-                asset_id: pet_2_id,
-                loyalty: 95,
-                intelligence: 85,
-                agility: 70,
-                special_ability: 'COMBAT_SUPPORT',
-                energy: 120,
-            };
-            world.write_model(@pet_2_stats);
+            // let pet_2_stats = crate::models::pet_stats::PetStats {
+            //     asset_id: pet_2_id,
+            //     loyalty: 95,
+            //     intelligence: 85,
+            //     agility: 70,
+            //     special_ability: 'COMBAT_SUPPORT',
+            //     energy: 120,
+            // };
+            // world.write_model(@pet_2_stats);
         }
     }
 }
