@@ -19,9 +19,24 @@ pub trait ICore<TContractState> {
 
 #[dojo::contract]
 pub mod CoreActions {
-    use starknet::{ContractAddress, get_caller_address};
+    use starknet::ContractAddress;
+    use dojo::model::ModelStorage;
+    use crate::models::core::{Contract, Operator};
 
-    fn dojo_init(ref self: ContractState, admin: ContractAddress, erc1155: ContractAddress) {}
+    const GEAR: felt252 = 'GEAR';
+    const COA_CONTRACTS: felt252 = 'COA_CONTRACTS';
+
+    fn dojo_init(ref self: ContractState, admin: ContractAddress, erc1155: ContractAddress) {
+        let mut world = self.world(@"coa_contracts");
+
+        // Initialize admin
+        let operator = Operator { id: admin, is_operator: true };
+        world.write_model(@operator);
+
+        // Initialize contract configuration
+        let contract = Contract { id: COA_CONTRACTS, admin, erc1155 };
+        world.write_model(@contract);
+    }
 
     #[abi(embed_v0)]
     pub impl CoreActionsImpl of super::ICore<ContractState> {
