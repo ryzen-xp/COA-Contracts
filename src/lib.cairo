@@ -14,6 +14,7 @@ pub mod models {
     pub mod core;
     pub mod gear;
     pub mod armour;
+    pub mod market;
 }
 
 pub mod interfaces {
@@ -28,6 +29,11 @@ pub mod helpers {
 pub mod types {
     pub mod base;
     pub mod player;
+}
+
+pub mod market {
+    pub mod marketplace;
+    pub mod interface;
 }
 
 pub mod tests {}
