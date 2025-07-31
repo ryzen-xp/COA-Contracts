@@ -19,7 +19,6 @@ pub mod models {
     pub mod armor_stats;
     pub mod vehicle_stats;
     pub mod pet_stats;
-
 }
 
 pub mod interfaces {

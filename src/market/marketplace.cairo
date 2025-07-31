@@ -159,11 +159,11 @@ pub mod Marketplace {
             new_counter
         }
         // this is I think used to list  tthe item for sell  with
-        fn move_to_market(ref self: ContractState, item_ids: Array<u256> , prices: Array<u256>) {
+        fn move_to_market(ref self: ContractState, item_ids: Array<u256>, prices: Array<u256>) {
             let caller = get_caller_address();
             let market_id = self.users_market.read(caller);
             assert(market_id != 0, 'No_Market_Registered');
-            assert(item_ids.len() == prices.len() , 'Invalid_prices_items_size');
+            assert(item_ids.len() == prices.len(), 'Invalid_prices_items_size');
 
             let market = self.registrations.read(market_id);
             assert(market.owner == caller, 'Unauthorized_caller');
@@ -276,7 +276,6 @@ pub mod Marketplace {
         ) {
             let caller = get_caller_address();
 
-         
             let market_id = self.users_market.read(caller);
             assert(market_id != 0, 'No_Market_Registered');
 
@@ -284,12 +283,10 @@ pub mod Marketplace {
             assert(market.owner == caller, 'Unauthorized');
             assert(market.is_auction, 'Market_Not_Auction_Enabled');
 
-    
             let item = self.market_items.read(item_id);
             assert(item.owner == caller, 'Not_Item_Owner');
             assert(item.is_available, 'Item_Not_Listed');
 
- 
             let auction_id = self.auction_counter.read() + 1;
             self.auction_counter.write(auction_id);
 
@@ -325,7 +322,7 @@ pub mod Marketplace {
             let client = IERC20Dispatcher { contract_address: token };
             assert(client.balance_of(caller) >= amount, 'Insufficient_Funds');
 
-            // Refund previous highest bidder 
+            // Refund previous highest bidder
             if auction.highest_bidder != self.market_items.read(auction.market_id).owner {
                 client.transfer(auction.highest_bidder, auction.highest_bid);
             }
