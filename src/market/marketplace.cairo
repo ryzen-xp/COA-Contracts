@@ -159,10 +159,11 @@ pub mod Marketplace {
             new_counter
         }
         // this is I think used to list  tthe item for sell  with
-        fn move_to_market(ref self: ContractState, item_ids: Array<u256>) {
+        fn move_to_market(ref self: ContractState, item_ids: Array<u256> , prices: Array<u256>) {
             let caller = get_caller_address();
             let market_id = self.users_market.read(caller);
             assert(market_id != 0, 'No_Market_Registered');
+            assert(item_ids.len() == prices.len() , 'Invalid_prices_items_size');
 
             let market = self.registrations.read(market_id);
             assert(market.owner == caller, 'Unauthorized_caller');
@@ -179,6 +180,7 @@ pub mod Marketplace {
                     break;
                 }
                 let id = *item_ids.at(i);
+                let price = *prices.at(i);
 
                 if self._check_item_ownership(id, caller) {
                     ids.append(id);
@@ -192,7 +194,7 @@ pub mod Marketplace {
                         item_id,
                         market_id,
                         owner: caller,
-                        price: 0_u256,
+                        price: price,
                         quantity: 1_u256,
                         is_available: true,
                         is_auction_item: market.is_auction,

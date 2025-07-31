@@ -16,6 +16,4 @@ pub struct Contract {
     pub id: felt252,
     pub admin: ContractAddress,
     pub erc1155: ContractAddress,
-    pub fees: u256,
-    pub escrow_address: ContractAddress,
 }

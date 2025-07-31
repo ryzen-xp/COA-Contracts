@@ -25,8 +25,10 @@ pub struct MarketItem {
     pub is_auction_item: bool,
 }
 
+#[dojo::model]
 #[derive(Drop, Serde, starknet::Store)]
 pub struct Auction {
+    #[key]
     pub auction_id: u256,
     pub market_id: u256,
     pub item_id: u256,
