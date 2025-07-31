@@ -69,7 +69,10 @@ pub struct PlayerDamaged {
     #[key]
     pub player_id: u256,
     pub damage_received: u256,
+    pub damage_reduction: u256,
+    pub actual_damage: u256,
     pub remaining_hp: u256,
+    pub is_alive: bool,
 }
 
 #[derive(Copy, Drop, Serde)]
@@ -186,18 +189,56 @@ pub impl PlayerImpl of PlayerTrait {
 
         // add the item to the equipped list
         self.equipped.append(item_id);
+    }fn is_equipped(self: Player, type_id: u128) -> u256 {
+    // let equipped = self.equipped; // use this array to check if the item is equipped
+    self.body.get_equipped_item(type_id)
+}
+
+fn receive_damage(ref self: Player, damage: u256) -> bool {
+    // Calculate damage reduction based on equipped armor
+    let damage_reduction = self.calculate_damage_reduction();
+    let actual_damage = if damage > damage_reduction {
+        damage - damage_reduction
+    } else {
+        0
+    };
+
+    // Reduce HP
+    if actual_damage > 0 {
+        if actual_damage >= self.hp {
+            // Player dies
+            self.hp = 0;
+            false
+        } else {
+            self.hp -= actual_damage;
+            true
+        }
+    } else {
+        // No damage taken
+        true
+    }
+}fn calculate_damage_reduction(self: @Player) -> u256 {
+        // Calculate damage reduction based on equipped armor
+        let mut total_reduction: u256 = 0;
+
+        // Check upper and lower torso for armor
+        if !self.body.upper_torso.is_empty() {
+            total_reduction += 10; // Example fixed reduction for chest armor
+        }
+        if !self.body.lower_torso.is_empty() {
+            total_reduction += 5; // Example fixed reduction for leg armor
+        }
+        if *self.body.head != 0 {
+            total_reduction += 3; // Helmet reduction
+        }
+
+        total_reduction
     }
 
-
-    fn is_equipped(self: Player, type_id: u128) -> u256 {
-        // let equipped = self.equipped; // use this array to check if the item is equipped
-        self.body.get_equipped_item(type_id)
-    }
-
-    #[inline(always)]
-    fn check(self: @Player) {
-        assert(self.id.is_non_zero(), Errors::ZERO_PLAYER);
-    }
+#[inline(always)]
+fn check(self: @Player) {
+    assert(self.id.is_non_zero(), Errors::ZERO_PLAYER);
+}
     // fn equip(ref self: Player, ref Item) {
 //     assert()
 // }
