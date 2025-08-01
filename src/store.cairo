@@ -2,6 +2,8 @@ use starknet::ContractAddress;
 use dojo::model::ModelStorage;
 use dojo::event::EventStorage;
 use core::num::traits::Zero;
+use core::hash::HashStateTrait;
+use core::pedersen::PedersenTrait;
 
 // ============================================================================
 // STORE MODELS - Arquitectura ECS Modular
@@ -140,6 +142,10 @@ pub impl StoreImpl of StoreTrait {
         max_items: u32,
         tax_rate: u16,
     ) -> StoreConfig {
+        // Check if store already exists
+        let existing_store: StoreConfig = world.read_model(store_id);
+        assert(existing_store.owner.is_zero(), 'STORE_ALREADY_EXISTS');
+
         // Validaciones de negocio
         assert(tax_rate <= 10000, 'TAX_RATE_TOO_HIGH'); // Max 100%
         assert(max_items > 0, 'INVALID_MAX_ITEMS');
@@ -225,10 +231,24 @@ pub impl StoreImpl of StoreTrait {
         assert(item.stock >= quantity, 'INSUFFICIENT_STOCK');
         assert(quantity > 0, 'INVALID_QUANTITY');
 
-        // Calcular precios
-        let base_price = item.price * quantity.into();
-        let tax = (base_price * config.tax_rate.into()) / 10000;
-        let total_price = base_price + tax;
+        // Use safe math to prevent overflow
+        let quantity_u256: u256 = quantity.into();
+
+        // Check for price overflow
+        let max_price = 0xffffffffffffffffffffffffffffffff_u256 / quantity_u256;
+        assert(item.price <= max_price, 'PRICE_OVERFLOW');
+        let base_price = item.price * quantity_u256;
+
+        // Check for tax overflow
+        let tax_rate_u256: u256 = config.tax_rate.into();
+        let max_tax_base = 0xffffffffffffffffffffffffffffffff_u256 / tax_rate_u256;
+        assert(base_price <= max_tax_base, 'TAX_OVERFLOW');
+        let tax_amount = (base_price * tax_rate_u256) / 10000;
+
+        // Check for total overflow
+        let max_total = 0xffffffffffffffffffffffffffffffff_u256 - tax_amount;
+        assert(base_price <= max_total, 'TOTAL_OVERFLOW');
+        let total_price = base_price + tax_amount;
 
         // Actualizar stock - Operación UPDATE
         item.stock -= quantity;
@@ -241,6 +261,8 @@ pub impl StoreImpl of StoreTrait {
         let transaction_id = generate_transaction_id(world, store_id, buyer);
         let timestamp = starknet::get_block_timestamp();
 
+        // TODO: In production, implement payment verification before setting status to completed
+        // For now, transactions are set to completed immediately
         let transaction = StoreTransaction {
             transaction_id,
             store_id,
@@ -249,7 +271,7 @@ pub impl StoreImpl of StoreTrait {
             quantity,
             total_price,
             timestamp,
-            status: 1 // Completed
+            status: 1 // Completed - should verify payment first in production
         };
 
         world.write_model(@transaction);
@@ -265,13 +287,26 @@ pub impl StoreImpl of StoreTrait {
 
     /// Reabastecer stock - Operación UPDATE
     fn restock_item(
-        ref world: dojo::world::WorldStorage, store_id: u32, item_id: u256, additional_stock: u32,
+        ref world: dojo::world::WorldStorage,
+        store_id: u32,
+        item_id: u256,
+        additional_stock: u32,
+        caller: ContractAddress,
     ) {
+        // Check permissions
+        assert(
+            Self::has_permission(world, store_id, caller, StoreConstants::ROLE_MANAGER),
+            'UNAUTHORIZED',
+        );
         let mut item: StoreItem = world.read_model((store_id, item_id));
 
         assert(additional_stock > 0, 'INVALID_STOCK_AMOUNT');
 
         let old_stock = item.stock;
+
+        // Check for stock overflow
+        let max_additional = 0xffffffff_u32 - item.stock;
+        assert(additional_stock <= max_additional, 'STOCK_OVERFLOW');
         item.stock += additional_stock;
         item.is_available = true;
 
@@ -340,10 +375,15 @@ fn generate_transaction_id(
 ) -> u256 {
     let timestamp = starknet::get_block_timestamp();
     let block_number = starknet::get_block_number();
+    let buyer_felt: felt252 = buyer.into();
 
-    // Combinación simple para crear ID único
-    // En implementación real, usar hash function
-    (timestamp.into() * 1000000) + store_id.into() + (block_number % 1000000).into()
+    // Use pedersen hash for better uniqueness and security
+    let mut hash_state = PedersenTrait::new(0);
+    hash_state = hash_state.update(timestamp.into());
+    hash_state = hash_state.update(store_id.into());
+    hash_state = hash_state.update(block_number.into());
+    hash_state = hash_state.update(buyer_felt);
+    hash_state.finalize().into()
 }
 
 // ============================================================================
@@ -387,6 +427,7 @@ pub mod StoreConstants {
 
 pub mod StoreErrors {
     pub const STORE_NOT_FOUND: felt252 = 'STORE_NOT_FOUND';
+    pub const STORE_ALREADY_EXISTS: felt252 = 'STORE_ALREADY_EXISTS';
     pub const STORE_NOT_ACTIVE: felt252 = 'STORE_NOT_ACTIVE';
     pub const ITEM_NOT_FOUND: felt252 = 'ITEM_NOT_FOUND';
     pub const ITEM_NOT_AVAILABLE: felt252 = 'ITEM_NOT_AVAILABLE';
@@ -397,4 +438,8 @@ pub mod StoreErrors {
     pub const INVALID_PRICE: felt252 = 'INVALID_PRICE';
     pub const STORE_FULL: felt252 = 'STORE_FULL';
     pub const TRANSACTION_FAILED: felt252 = 'TRANSACTION_FAILED';
+    pub const PRICE_OVERFLOW: felt252 = 'PRICE_OVERFLOW';
+    pub const TAX_OVERFLOW: felt252 = 'TAX_OVERFLOW';
+    pub const TOTAL_OVERFLOW: felt252 = 'TOTAL_OVERFLOW';
+    pub const STOCK_OVERFLOW: felt252 = 'STOCK_OVERFLOW';
 }
