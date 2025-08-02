@@ -337,7 +337,7 @@ pub mod TournamentActions {
             world.write_model(@match_);
 
             self.update_participant_stats(tournament_id, winner_id, true);
-            self.update_participant_stats(tournament_id, loser_id, false);
+            // self.update_participant_stats(tournament_id, loser_id, false);
 
             if let Option::Some(next_match_id) = match_.next_match_id {
                 self.advance_winner(tournament_id, winner_id, next_match_id);
