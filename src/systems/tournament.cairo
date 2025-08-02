@@ -98,6 +98,12 @@ pub mod TournamentActions {
 
             assert(registration_start < registration_end, Errors::INVALID_DATES);
             assert(min_players >= 2 && min_players <= max_players, Errors::INVALID_PLAYERS);
+            // Ensure registration window hasn't already passed
+            let now = get_block_timestamp();
+            assert(registration_end > now, Errors::REGISTRATION_END_MUST_BE_IN_FUTURE);
+            // Ensure prize pool makes sense relative to potential entry fees
+            let min_entry_fees = entry_fee * min_players.into();
+            assert(prize_pool >= min_entry_fees, Errors::LOW_PRIZE_POOL);
 
             let total_rounds = self.calculate_rounds(max_players);
 
@@ -271,6 +277,20 @@ pub mod TournamentActions {
                 'Participant list mismatch',
             );
 
+            // Verify all participants are actually registered
+            let mut i = 0;
+            loop {
+                if i >= participants.len() {
+                    break;
+                }
+
+                let player_id = *participants.at(i);
+                let participant: Participant = world.read_model((tournament_id, player_id));
+                assert(participant.is_registered, Errors::UNREGISTERED_PLAYER);
+
+                i += 1;
+            };
+
             tournament.status = TournamentStatus::InProgress;
             world.write_model(@tournament);
 
@@ -298,6 +318,20 @@ pub mod TournamentActions {
                 Errors::INVALID_WINNER,
             );
 
+            // Handle bye rounds where player2 might be None
+            if let Option::Some(player2) = match_.player2 {
+                assert(winner_id == match_.player1 || winner_id == player2, Errors::INVALID_WINNER);
+                let loser_id = if winner_id == match_.player1 {
+                    player2
+                } else {
+                    match_.player1
+                };
+                self.update_participant_stats(tournament_id, loser_id, false);
+            } else {
+                // Bye round - only player1 exists
+                assert(winner_id == match_.player1, Errors::INVALID_WINNER);
+            }
+
             match_.winner = winner_id;
             match_.is_completed = true;
             world.write_model(@match_);
@@ -321,7 +355,7 @@ pub mod TournamentActions {
             let winner_key = (tournament_id, player_id);
             let mut winner: Winner = world.read_model(winner_key);
 
-            assert(winner.player_id.is_zero(), Errors::NOT_WINNER);
+            assert(winner.player_id == player_id, Errors::NOT_WINNER);
             assert(!winner.has_claimed, Errors::PRIZE_CLAIMED);
             winner.has_claimed = true;
             world.write_model(@winner);

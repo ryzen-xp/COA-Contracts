@@ -181,4 +181,7 @@ pub mod Errors {
     pub const INVALID_WINNER: felt252 = 'Winner is not a participant';
     pub const NOT_WINNER: felt252 = 'Caller is not a prize winner';
     pub const PRIZE_CLAIMED: felt252 = 'Prize already claimed';
+    pub const REGISTRATION_END_MUST_BE_IN_FUTURE: felt252 = 'Registration end must be future';
+    pub const LOW_PRIZE_POOL: felt252 = 'Prize pool too low';
+    pub const UNREGISTERED_PLAYER: felt252 = 'Unregistered player in list';
 }
