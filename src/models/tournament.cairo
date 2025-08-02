@@ -1,36 +1,39 @@
 use starknet::ContractAddress;
-use core::num::traits::Zero;
+use core::option::Option;
+use core::num::traits::zero::Zero;
 
-/// Enum defining the different types of tournaments available.
-#[derive(Drop, Copy, Serde, Debug, PartialEq, Introspect)]
+// --- ENUMS ---
+
+#[derive(Drop, Copy, Serde, Debug, Default, PartialEq, Introspect)]
 pub enum TournamentType {
+    #[default]
     SingleElimination,
 }
 
-/// Enum representing the current status of a tournament.
-#[derive(Drop, Copy, Serde, Debug, PartialEq, Introspect)]
+#[derive(Drop, Copy, Serde, Debug, Default, PartialEq, Introspect)]
 pub enum TournamentStatus {
-    Open, // Open for registration
+    #[default]
+    Open,
     InProgress,
     Completed,
     Cancelled,
 }
 
-/// A singleton model to store system-wide configuration.
+// --- MODELS ---
+
 #[dojo::model]
-#[derive(Drop, Serde, Debug)]
+#[derive(Drop, Copy, Serde, Debug, PartialEq)]
 pub struct Config {
     #[key]
-    pub id: u8, // Singleton ID, always 0
+    pub id: u8,
     pub admin: ContractAddress,
     pub next_tournament_id: u256,
     pub erc1155_address: ContractAddress,
     pub credit_token_id: u256,
 }
 
-/// The main data model for a tournament.
 #[dojo::model]
-#[derive(Drop, Copy, Serde, Debug)]
+#[derive(Drop, Copy, Serde, Debug, Default, PartialEq)]
 pub struct Tournament {
     #[key]
     pub id: u256,
@@ -49,9 +52,8 @@ pub struct Tournament {
     pub level_requirement: u256,
 }
 
-/// Represents a player who has registered for a tournament.
 #[dojo::model]
-#[derive(Drop, Copy, Serde, Debug)]
+#[derive(Drop, Copy, Serde, Debug, PartialEq, Default)]
 pub struct Participant {
     #[key]
     pub tournament_id: u256,
@@ -63,25 +65,23 @@ pub struct Participant {
     pub is_eliminated: bool,
 }
 
-/// Stores information about a single match within a tournament.
 #[dojo::model]
-#[derive(Drop, Copy, Serde, Debug)]
+#[derive(Drop, Copy, Serde, Debug, PartialEq)]
 pub struct Match {
     #[key]
     pub tournament_id: u256,
     #[key]
     pub match_id: u32,
     pub player1: ContractAddress,
-    pub player2: Option<ContractAddress>, // Option for bye rounds
+    pub player2: Option<ContractAddress>,
     pub winner: ContractAddress,
     pub is_completed: bool,
     pub round: u32,
     pub next_match_id: Option<u32>,
 }
 
-/// Records the winners of a tournament and their prize information.
 #[dojo::model]
-#[derive(Drop, Copy, Serde, Debug)]
+#[derive(Drop, Copy, Serde, Debug, PartialEq, Introspect)]
 pub struct Winner {
     #[key]
     pub tournament_id: u256,
@@ -92,6 +92,8 @@ pub struct Winner {
     pub has_claimed: bool,
 }
 
+// --- EVENTS ---
+
 #[derive(Copy, Drop, Serde)]
 #[dojo::event]
 pub struct TournamentCreated {
@@ -100,7 +102,6 @@ pub struct TournamentCreated {
     pub creator: ContractAddress,
     pub name: felt252,
 }
-
 #[derive(Copy, Drop, Serde)]
 #[dojo::event]
 pub struct PlayerRegistered {
@@ -108,7 +109,6 @@ pub struct PlayerRegistered {
     pub tournament_id: u256,
     pub player_id: ContractAddress,
 }
-
 #[derive(Copy, Drop, Serde)]
 #[dojo::event]
 pub struct PlayerUnregistered {
@@ -116,7 +116,6 @@ pub struct PlayerUnregistered {
     pub tournament_id: u256,
     pub player_id: ContractAddress,
 }
-
 #[derive(Copy, Drop, Serde)]
 #[dojo::event]
 pub struct TournamentStarted {
@@ -124,7 +123,6 @@ pub struct TournamentStarted {
     pub tournament_id: u256,
     pub initial_matches: u32,
 }
-
 #[derive(Copy, Drop, Serde)]
 #[dojo::event]
 pub struct TournamentCancelled {
@@ -132,7 +130,6 @@ pub struct TournamentCancelled {
     pub tournament_id: u256,
     pub refunds_processed: u32,
 }
-
 #[derive(Copy, Drop, Serde)]
 #[dojo::event]
 pub struct MatchCompleted {
@@ -141,7 +138,6 @@ pub struct MatchCompleted {
     pub match_id: u32,
     pub winner_id: ContractAddress,
 }
-
 #[derive(Copy, Drop, Serde)]
 #[dojo::event]
 pub struct TournamentFinished {
@@ -149,7 +145,6 @@ pub struct TournamentFinished {
     pub tournament_id: u256,
     pub winner: ContractAddress,
 }
-
 #[derive(Copy, Drop, Serde)]
 #[dojo::event]
 pub struct PrizeClaimed {
@@ -160,6 +155,8 @@ pub struct PrizeClaimed {
     pub amount: u256,
 }
 
+
+// --- HELPERS & ERRORS ---
 impl ContractAddressDefault of Default<ContractAddress> {
     fn default() -> ContractAddress {
         Zero::zero()
@@ -179,7 +176,6 @@ pub mod Errors {
     pub const LEVEL_TOO_LOW: felt252 = 'Player level too low';
     pub const NOT_REGISTERED: felt252 = 'Player is not registered';
     pub const ALREADY_REGISTERED: felt252 = 'Player already registered';
-    pub const PARTICIPANT_LIST_MISMATCH: felt252 = 'Participant list mismatch';
     pub const MATCH_NOT_FOUND: felt252 = 'Match not found';
     pub const MATCH_COMPLETED: felt252 = 'Match already completed';
     pub const INVALID_WINNER: felt252 = 'Winner is not a participant';
