@@ -4,6 +4,7 @@ pub mod systems {
     pub mod gear;
     pub mod armour;
     pub mod pet;
+    pub mod tournament;
 }
 
 pub mod erc1155 {
@@ -20,6 +21,7 @@ pub mod models {
     pub mod armor_stats;
     pub mod vehicle_stats;
     pub mod pet_stats;
+    pub mod tournament;
 }
 
 pub mod interfaces {
@@ -46,3 +48,6 @@ pub mod tests {}
 pub mod traits {
     pub mod pet_trait;
 }
+
+// Store system - Sistema de tiendas con arquitectura ECS
+pub mod store;
