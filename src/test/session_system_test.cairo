@@ -135,10 +135,7 @@ mod tests {
 
         // Test SessionKeyCreated event
         let created_event = SessionKeyCreated {
-            session_id,
-            player_address,
-            session_key_address: player_address,
-            expires_at,
+            session_id, player_address, session_key_address: player_address, expires_at,
         };
 
         assert(created_event.session_id == session_id, 'Wrong event session ID');
@@ -146,9 +143,7 @@ mod tests {
 
         // Test SessionKeyRevoked event
         let revoked_event = SessionKeyRevoked {
-            session_id,
-            player_address,
-            revoked_by: player_address,
+            session_id, player_address, revoked_by: player_address,
         };
 
         assert(revoked_event.session_id == session_id, 'Wrong revoked event ID');
@@ -156,10 +151,7 @@ mod tests {
 
         // Test SessionKeyUsed event
         let used_event = SessionKeyUsed {
-            session_id,
-            player_address,
-            action_type: 'MOVE',
-            success: true,
+            session_id, player_address, action_type: 'MOVE', success: true,
         };
 
         assert(used_event.session_id == session_id, 'Wrong used event ID');
@@ -169,20 +161,29 @@ mod tests {
     #[test]
     fn test_session_key_transaction_limits() {
         let mut session_key = sample_session_key();
-        
+
         // Test transaction counting
         assert(session_key.used_transactions == 0, 'Should start with 0 used');
-        assert(session_key.used_transactions < session_key.max_transactions, 'Has transactions left');
+        assert(
+            session_key.used_transactions < session_key.max_transactions, 'Has transactions left',
+        );
 
         // Simulate using transactions
         session_key.used_transactions = 50;
         assert(session_key.used_transactions == 50, 'Should have 50 used');
-        assert(session_key.used_transactions < session_key.max_transactions, 'Still has transactions left');
+        assert(
+            session_key.used_transactions < session_key.max_transactions,
+            'Still has transactions left',
+        );
 
         // Test max transactions reached
         session_key.used_transactions = session_key.max_transactions;
-        assert(session_key.used_transactions == session_key.max_transactions, 'Should have max used');
-        assert(session_key.used_transactions >= session_key.max_transactions, 'No transactions left');
+        assert(
+            session_key.used_transactions == session_key.max_transactions, 'Should have max used',
+        );
+        assert(
+            session_key.used_transactions >= session_key.max_transactions, 'No transactions left',
+        );
     }
 
     #[test]
@@ -372,13 +373,21 @@ mod tests {
 
         // Test valid session status logic
         let is_valid = session_id != 0;
-        let status = if is_valid { 0 } else { 3 };
+        let status = if is_valid {
+            0
+        } else {
+            3
+        };
         assert(status == 0, 'Should be valid (status 0)');
 
         // Test invalid session status logic
         let invalid_session_id = 0;
         let is_invalid = invalid_session_id != 0;
-        let invalid_status = if is_invalid { 0 } else { 3 };
+        let invalid_status = if is_invalid {
+            0
+        } else {
+            3
+        };
         assert(invalid_status == 3, 'Should be invalid (status 3)');
     }
 
