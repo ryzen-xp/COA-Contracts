@@ -5,7 +5,6 @@ pub mod systems {
     pub mod armour;
     pub mod pet;
     pub mod tournament;
-    pub mod pet;
 }
 
 pub mod erc1155 {
