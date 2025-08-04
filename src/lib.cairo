@@ -5,6 +5,7 @@ pub mod systems {
     pub mod armour;
     pub mod pet;
     pub mod tournament;
+    pub mod session;
 }
 
 pub mod erc1155 {
@@ -22,6 +23,7 @@ pub mod models {
     pub mod vehicle_stats;
     pub mod pet_stats;
     pub mod tournament;
+    pub mod session;
 }
 
 pub mod interfaces {
@@ -43,7 +45,9 @@ pub mod market {
     pub mod interface;
 }
 
-pub mod tests {}
+pub mod test {
+    pub mod session_system_test;
+}
 
 pub mod traits {
     pub mod pet_trait;
