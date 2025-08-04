@@ -1,6 +1,10 @@
 #[dojo::contract]
 pub mod SessionActions {
     use starknet::{ContractAddress, get_caller_address, get_block_timestamp};
+    use coa::models::session::{SessionKey, SessionKeyCreated};
+    use dojo::model::ModelStorage;
+    use dojo::event::EventStorage;
+    use core::poseidon::poseidon_hash_span;
 
     // Constants for session management
     const DEFAULT_SESSION_DURATION: u64 = 21600; // 6 hours in seconds
@@ -21,8 +25,36 @@ pub mod SessionActions {
         assert(max_transactions > 0, 'INVALID_MAX_TRANSACTIONS');
         assert(max_transactions <= MAX_TRANSACTIONS_PER_SESSION, 'TOO_MANY_TRANSACTIONS');
 
-        // Generate unique session ID
-        let session_id = player.into() + current_time.into();
+        // Generate unique session ID using Poseidon hash to avoid collisions
+        let mut hash_data = array![player.into(), current_time.into()];
+        let session_id = poseidon_hash_span(hash_data.span());
+
+        // Create session key model
+        let session_key = SessionKey {
+            session_id,
+            player_address: player,
+            session_key_address: player, // Using player as session key for now
+            created_at: current_time,
+            expires_at: current_time + session_duration,
+            last_used: current_time,
+            status: 0, // Active
+            max_transactions,
+            used_transactions: 0,
+            is_valid: true,
+        };
+
+        // Store session in world storage
+        let mut world = self.world_default();
+        world.write_model(@session_key);
+
+        // Emit creation event
+        let event = SessionKeyCreated {
+            session_id,
+            player_address: player,
+            session_key_address: player,
+            expires_at: current_time + session_duration,
+        };
+        world.emit_event(@event);
 
         session_id
     }
@@ -31,11 +63,45 @@ pub mod SessionActions {
     fn validate_session(
         self: @ContractState, session_id: felt252, player: ContractAddress,
     ) -> bool {
-        let current_time = get_block_timestamp();
+        // Validate session by reading from storage and checking all properties
+        let world = self.world_default();
 
-        // Basic validation - check if session_id is not zero
-        // This is a simplified version that will be enhanced later
-        session_id != 0
+        // Try to read the session from storage
+        let session: SessionKey = world.read_model((session_id, player));
+
+        // Check if session exists (non-zero values indicate it exists)
+        if session.session_id == 0 {
+            return false;
+        }
+
+        // Validate session belongs to the correct player
+        if session.player_address != player {
+            return false;
+        }
+
+        // Check if session is valid
+        if !session.is_valid {
+            return false;
+        }
+
+        // Check session status (0 = Active)
+        if session.status != 0 {
+            return false;
+        }
+
+        // Check if session has expired
+        let current_time = get_block_timestamp();
+        if current_time >= session.expires_at {
+            return false;
+        }
+
+        // Check if session has exceeded transaction limit
+        if session.used_transactions >= session.max_transactions {
+            return false;
+        }
+
+        // All validations passed
+        true
     }
 
     #[external(v0)]
@@ -68,27 +134,8 @@ pub mod SessionActions {
         used_transactions: u32,
         max_transactions: u32,
     ) -> bool {
-        // Check if session is valid
-        let is_valid = session_id != 0;
-        if !is_valid {
-            return false;
-        }
-
-        // Check if session has expired
-        let current_time = get_block_timestamp();
-        let expiry_time = session_created_at + session_duration;
-        let not_expired = current_time < expiry_time;
-        if !not_expired {
-            return false;
-        }
-
-        // Check if there are transactions left
-        let has_transactions = used_transactions < max_transactions;
-        if !has_transactions {
-            return false;
-        }
-
-        true
+        // Use the comprehensive session validation
+        validate_session(self, session_id, player)
     }
 
     #[external(v0)]
@@ -173,5 +220,12 @@ pub mod SessionActions {
         }
 
         expiry_time - current_time
+    }
+
+    #[generate_trait]
+    impl InternalImpl of InternalTrait {
+        fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
+            self.world(@"coa")
+        }
     }
 }
