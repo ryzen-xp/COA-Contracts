@@ -15,7 +15,8 @@ pub struct SessionKey {
     pub status: u8, // 0=Active, 1=Expired, 2=Revoked (simple integer instead of enum)
     pub max_transactions: u32,
     pub used_transactions: u32,
-    pub is_valid: bool // Simple boolean for session validation
+    pub is_valid: bool,
+    // Simple boolean for session validation
 }
 
 // Simple events for session management
