@@ -114,9 +114,6 @@ pub mod GearActions {
             array![].span()
         }
 
-        // fn pick_items(ref self: ContractState, item_id: Array<u256>) -> Array<u256> {
-        //     array![]
-        // }
         fn pick_items(ref self: ContractState, item_id: Array<u256>) -> Array<u256> {
             let mut world = self.world_default();
             let caller = get_caller_address();
@@ -128,7 +125,6 @@ pub mod GearActions {
             let mut successfully_picked: Array<u256> = array![];
             let erc1155_address = ContractAddressDefault::default();
 
-            // Check if player has vehicle equipped for handsfree logic
             let has_vehicle = player.has_vehicle_equipped();
 
             let mut i = 0;
@@ -136,7 +132,6 @@ pub mod GearActions {
                 let item_id = *item_id.at(i);
                 let mut gear: Gear = world.read_model(item_id);
 
-                // Assert item is spawned and not already owned
                 assert(gear.is_available_for_pickup(), 'Item not available');
 
                 // Check if player meets XP requirement
@@ -152,16 +147,12 @@ pub mod GearActions {
                     // If player has vehicle, mint all items directly to inventory
                     mint_item = true;
                 } else {
-                    // No vehicle, check equipability
                     if player.is_equippable(item_id) {
-                        // if item can be equipped, then equip it
                         PlayerTrait::equip(ref player, item_id);
                         equipped = true;
                         mint_item = true;
                     } else {
-                        // if item cannot be equipped, check if player has free inventory slot
-                        if player.equipped.len() < player.max_equip_slot {
-                            // if has free slot, then mint to inventory without equipping
+                        if player.has_free_inventory_slot() {
                             mint_item = true;
                         }
                     }
@@ -178,7 +169,7 @@ pub mod GearActions {
                     // Add to successfully picked array
                     successfully_picked.append(item_id);
 
-                    // emit pickUp event
+                    // Emit itempicked event
                     world
                         .emit_event(
                             @ItemPicked {
@@ -193,7 +184,7 @@ pub mod GearActions {
                 i += 1;
             };
 
-            // Updat  state
+            // Update Player state
             world.write_model(@player);
 
             successfully_picked

@@ -171,7 +171,7 @@ pub impl PlayerImpl of PlayerTrait {
         self.equipped.len() < *self.max_equip_slot
     }
 
-    // Update the existing get_xp function implementation
+    // Update get_xp function implementation
     fn get_xp(self: @Player) -> u256 {
         *self.xp
     }
@@ -181,7 +181,6 @@ pub impl PlayerImpl of PlayerTrait {
         let old_level = self.level;
         self.xp += value;
 
-        // Simple level calculation - every 1000 XP = 1 level
         let new_level = self.xp / 1000;
         if new_level > old_level {
             self.level = new_level;
@@ -191,9 +190,7 @@ pub impl PlayerImpl of PlayerTrait {
         }
     }
 
-    // Add this helper function to check vehicle equipped status
     fn has_vehicle_equipped(self: @Player) -> bool {
-        // Check if any vehicle is equipped in the body
         let vehicle_in_off_body = self.body.off_body.len() > 0
             && {
                 let mut has_vehicle = false;
