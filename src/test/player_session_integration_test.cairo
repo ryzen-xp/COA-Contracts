@@ -474,20 +474,20 @@ mod tests {
     fn test_player_new_with_valid_session() {
         // Create dispatcher for PlayerActions contract
         let player_dispatcher = create_player_dispatcher();
-        
+
         // Create a valid session
         let session = create_sample_session();
         assert(session.session_id != 0, 'Session should be valid');
         assert(session.is_valid, 'Session should be valid');
         assert(session.status == 0, 'Session should be active');
-        
+
         // In a real integration test, we would:
         // 1. Deploy the PlayerActions contract
         // 2. Deploy the SessionActions contract
         // 3. Create a session using SessionActions
         // 4. Call player_dispatcher.new(CHAOS_MERCENARIES, session.session_id)
         // 5. Verify the player was created successfully
-        
+
         // For now, we validate the session structure
         assert(session.session_id == VALID_SESSION_ID, 'Valid session ID');
     }
@@ -495,35 +495,35 @@ mod tests {
     #[test]
     fn test_player_new_with_invalid_session() {
         let player_dispatcher = create_player_dispatcher();
-        
+
         // Test with invalid session ID
         let invalid_session_id = INVALID_SESSION_ID;
         assert(invalid_session_id == 0, 'Session should be invalid');
-        
         // In a real integration test, this would panic when calling:
-        // player_dispatcher.new(CHAOS_MERCENARIES, invalid_session_id)
-        // due to session validation failure
+    // player_dispatcher.new(CHAOS_MERCENARIES, invalid_session_id)
+    // due to session validation failure
     }
 
     #[test]
     fn test_player_deal_damage_with_valid_session() {
         let player_dispatcher = create_player_dispatcher();
         let session = create_sample_session();
-        
+
         // Validate session
         assert(session.session_id != 0, 'Valid session');
         assert(session.is_valid, 'Session valid');
-        
+
         // In a real integration test, we would:
         // 1. Create a player first
-        // 2. Call player_dispatcher.deal_damage(target, target_types, with_items, session.session_id)
+        // 2. Call player_dispatcher.deal_damage(target, target_types, with_items,
+        // session.session_id)
         // 3. Verify damage was dealt successfully
-        
+
         // Mock data for damage test
         let target: Array<u256> = array![1_u256];
         let target_types: Array<felt252> = array!['LIVING'];
         let with_items: Array<u256> = array![];
-        
+
         // Validate test data structure
         assert(target.len() == 1, 'Target array len');
         assert(target_types.len() == 1, 'Target types len');
@@ -533,16 +533,16 @@ mod tests {
     fn test_player_get_player_with_valid_session() {
         let player_dispatcher = create_player_dispatcher();
         let session = create_sample_session();
-        
+
         // Validate session
         assert(session.session_id != 0, 'Valid session');
         assert(session.is_valid, 'Session valid');
-        
+
         // In a real integration test, we would:
         // 1. Create a player first
         // 2. Call player_dispatcher.get_player(player_id, session.session_id)
         // 3. Verify player data is returned correctly
-        
+
         let player_id = 1_u256;
         assert(player_id == 1_u256, 'Valid player ID');
     }
@@ -551,15 +551,15 @@ mod tests {
     fn test_player_register_guild_with_valid_session() {
         let player_dispatcher = create_player_dispatcher();
         let session = create_sample_session();
-        
+
         // Validate session
         assert(session.session_id != 0, 'Valid session');
         assert(session.is_valid, 'Session valid');
-        
+
         // In a real integration test, we would:
         // 1. Call player_dispatcher.register_guild(session.session_id)
         // 2. Verify guild registration was successful
-        
+
         assert(session.session_id == VALID_SESSION_ID, 'Valid session ID');
     }
 
@@ -567,19 +567,19 @@ mod tests {
     fn test_player_transfer_objects_with_valid_session() {
         let player_dispatcher = create_player_dispatcher();
         let session = create_sample_session();
-        
+
         // Validate session
         assert(session.session_id != 0, 'Valid session');
         assert(session.is_valid, 'Session valid');
-        
+
         // In a real integration test, we would:
         // 1. Create objects to transfer
         // 2. Call player_dispatcher.transfer_objects(object_ids, to_address, session.session_id)
         // 3. Verify objects were transferred successfully
-        
+
         let object_ids = array![1_u256, 2_u256];
         let to_address = sample_player();
-        
+
         assert(object_ids.len() == 2, '2 objects to transfer');
         assert(to_address != contract_address_const::<0x0>(), 'Valid destination');
     }
@@ -588,15 +588,15 @@ mod tests {
     fn test_player_refresh_with_valid_session() {
         let player_dispatcher = create_player_dispatcher();
         let session = create_sample_session();
-        
+
         // Validate session
         assert(session.session_id != 0, 'Valid session');
         assert(session.is_valid, 'Session valid');
-        
+
         // In a real integration test, we would:
         // 1. Call player_dispatcher.refresh(player_id, session.session_id)
         // 2. Verify player data was refreshed successfully
-        
+
         let player_id = 1_u256;
         assert(player_id == 1_u256, 'Valid player ID for refresh');
     }
