@@ -222,6 +222,79 @@ pub mod SessionActions {
         expiry_time - current_time
     }
 
+    #[external(v0)]
+    fn renew_session(
+        ref self: ContractState, session_id: felt252, new_duration: u64, new_max_transactions: u32,
+    ) -> bool {
+        let player = get_caller_address();
+        let current_time = get_block_timestamp();
+
+        // Validate new session parameters
+        assert(new_duration >= MIN_SESSION_DURATION, 'DURATION_TOO_SHORT');
+        assert(new_duration <= MAX_SESSION_DURATION, 'DURATION_TOO_LONG');
+        assert(new_max_transactions > 0, 'INVALID_MAX_TRANSACTIONS');
+        assert(new_max_transactions <= MAX_TRANSACTIONS_PER_SESSION, 'TOO_MANY_TRANSACTIONS');
+
+        // Read existing session
+        let mut world = self.world_default();
+        let mut session: SessionKey = world.read_model((session_id, player));
+
+        // Validate session exists and belongs to caller
+        assert(session.session_id != 0, 'SESSION_NOT_FOUND');
+        assert(session.player_address == player, 'UNAUTHORIZED_SESSION');
+
+        // Check if session is still valid (not revoked)
+        assert(session.is_valid, 'SESSION_INVALID');
+        assert(session.status == 0, 'SESSION_NOT_ACTIVE');
+
+        // Renew the session
+        session.expires_at = current_time + new_duration;
+        session.last_used = current_time;
+        session.max_transactions = new_max_transactions;
+        session.used_transactions = 0; // Reset transaction count
+
+        // Write updated session back to storage
+        world.write_model(@session);
+
+        // Emit renewal event
+        let event = SessionKeyCreated {
+            session_id,
+            player_address: player,
+            session_key_address: player,
+            expires_at: current_time + new_duration,
+        };
+        world.emit_event(@event);
+
+        true
+    }
+
+    #[external(v0)]
+    fn check_session_needs_renewal(
+        self: @ContractState, session_id: felt252, min_time_remaining: u64,
+    ) -> bool {
+        let player = get_caller_address();
+        let current_time = get_block_timestamp();
+
+        // Read existing session
+        let world = self.world_default();
+        let session: SessionKey = world.read_model((session_id, player));
+
+        // Check if session exists and is valid
+        if session.session_id == 0 || !session.is_valid || session.status != 0 {
+            return false;
+        }
+
+        // Calculate time remaining
+        let time_remaining = if current_time >= session.expires_at {
+            0
+        } else {
+            session.expires_at - current_time
+        };
+
+        // Return true if renewal is needed
+        time_remaining < min_time_remaining
+    }
+
     #[generate_trait]
     impl InternalImpl of InternalTrait {
         fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
