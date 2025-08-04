@@ -62,13 +62,14 @@ mod tests {
         }
     }
 
-    #[test]
+        #[test]
     fn test_calculate_session_time_remaining() {
         let session = create_valid_session();
-        let time_remaining = calculate_session_time_remaining(session);
-
-        // Should have time remaining (expires_at: 2000, current time should be less)
-        assert(time_remaining > 0, 'Should have time remaining');
+        let current_time = 1400; // Between created_at (1000) and expires_at (2000)
+        let time_remaining = calculate_session_time_remaining_with_time(session, current_time);
+        
+        // Should have time remaining (expires_at: 2000, current_time: 1400)
+        assert(time_remaining == 600, '600 seconds remaining');
     }
 
     #[test]
