@@ -153,18 +153,61 @@ pub impl PlayerImpl of PlayerTrait {
     // Health should be fungible
     }
 
-    fn add_xp(ref self: Player, value: u256) -> bool {
-        // can be refactored to take in a task id with it's available xp to be earned or computed
-        // for now it just takes in the raw value.
-        // use the bool value to emit an event that a player has leveled up
-        // or emit the event right from here.
-        // and some combat skills mighht be locked until enough xp is gained.
-        false
+    // fn add_xp(ref self: Player, value: u256) -> bool {
+    //     // can be refactored to take in a task id with it's available xp to be earned or computed
+    //     // for now it just takes in the raw value.
+    //     // use the bool value to emit an event that a player has leveled up
+    //     // or emit the event right from here.
+    //     // and some combat skills mighht be locked until enough xp is gained.
+    //     false
+    // }
+
+    // fn get_xp(self: @Player) -> u256 {
+    //     // returns the player's xp.
+    //     0
+    // }
+
+    fn has_free_inventory_slot(self: @Player) -> bool {
+        self.equipped.len() < *self.max_equip_slot
     }
 
+    // Update the existing get_xp function implementation
     fn get_xp(self: @Player) -> u256 {
-        // returns the player's xp.
-        0
+        *self.xp
+    }
+
+    // Update the existing add_xp function to actually modify XP
+    fn add_xp(ref self: Player, value: u256) -> bool {
+        let old_level = self.level;
+        self.xp += value;
+
+        // Simple level calculation - every 1000 XP = 1 level
+        let new_level = self.xp / 1000;
+        if new_level > old_level {
+            self.level = new_level;
+            true // Player leveled up
+        } else {
+            false
+        }
+    }
+
+    // Add this helper function to check vehicle equipped status
+    fn has_vehicle_equipped(self: @Player) -> bool {
+        // Check if any vehicle is equipped in the body
+        let vehicle_in_off_body = self.body.off_body.len() > 0
+            && {
+                let mut has_vehicle = false;
+                let mut i = 0;
+                while i < self.body.off_body.len() {
+                    if parse_id(*self.body.off_body.at(i)) == GearType::Vehicle {
+                        has_vehicle = true;
+                        break;
+                    }
+                    i += 1;
+                };
+                has_vehicle
+            };
+        vehicle_in_off_body || parse_id(*self.body.back) == GearType::Vehicle
     }
 
     fn get_multiplier(self: @Player) -> u16 {

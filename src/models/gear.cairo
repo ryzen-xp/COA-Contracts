@@ -22,6 +22,7 @@ pub struct Gear {
     pub total_count: u64, // for fungible.
     pub in_action: bool, // this translates to if this gear is ready to be used... just like a gun in hand, rather than a docked gun. This field would be used in important checks in the future.
     pub upgrade_level: u64,
+    pub owner: ContractAddress, // ... owner field to track who owns the item 
     pub max_upgrade_level: u64,
     pub min_xp_needed: u256,
     pub spawned: bool,
@@ -71,16 +72,29 @@ pub impl GearImpl of GearTrait {
         // TODO: calculation for output based on upgraded level
         1000000
     }
+
+    // pub trait GearTrait {
+    //     fn with_id(id: u256) -> Gear;
+    //     fn is_upgradeable(ref self: Gear) -> bool;
+    //     fn forge(
+    //         items: Array<u256>,
+    //     ) -> u256; // can only be implemented on specific ids. Might invoke the worldstorage if
+    //     necessary.
+    //     fn is_fungible(id: u256);
+    //     fn output(self: @Gear, value: u256);
+    // }/ ... Add ownership checking function
+    fn is_owned(self: @Gear) -> bool {
+        !self.owner.is_zero()
+    }
+    // implemted transfer_to, is_available_for_pickup, is_owned, and pub owner: ContractAddress, in
+    // Gear/Models ... Add function to check if available for pickup
+    fn is_available_for_pickup(self: @Gear) -> bool {
+        *self.spawned && self.owner.is_zero()
+    }
+
+    // ... Transfer ownership
+    fn transfer_to(ref self: Gear, new_owner: ContractAddress) {
+        self.owner = new_owner;
+        self.spawned = false;
+    }
 }
-// pub trait GearTrait {
-//     fn with_id(id: u256) -> Gear;
-//     fn is_upgradeable(ref self: Gear) -> bool;
-//     fn forge(
-//         items: Array<u256>,
-//     ) -> u256; // can only be implemented on specific ids. Might invoke the worldstorage if
-//     necessary.
-//     fn is_fungible(id: u256);
-//     fn output(self: @Gear, value: u256);
-// }
-
-

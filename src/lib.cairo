@@ -47,6 +47,7 @@ pub mod market {
 
 pub mod test {
     pub mod session_system_test;
+    pub mod pick_item_test;
 }
 
 pub mod traits {
