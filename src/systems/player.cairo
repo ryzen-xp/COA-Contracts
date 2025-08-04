@@ -13,8 +13,8 @@ pub trait IPlayer<TContractState> {
     fn get_player(self: @TContractState, player_id: u256, session_id: felt252) -> Player;
     fn register_guild(ref self: TContractState, session_id: felt252);
     fn transfer_objects(
-        ref self: TContractState, 
-        object_ids: Array<u256>, 
+        ref self: TContractState,
+        object_ids: Array<u256>,
         to: starknet::ContractAddress,
         session_id: felt252,
     );
@@ -69,10 +69,12 @@ pub mod PlayerActions {
 
     #[abi(embed_v0)]
     impl PlayerActionsImpl of IPlayer<ContractState> {
-        fn new(ref self: ContractState, faction: felt252, session_id: felt252) { // create the player
+        fn new(
+            ref self: ContractState, faction: felt252, session_id: felt252,
+        ) { // create the player
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
+
             let mut world = self.world_default();
             let caller = get_caller_address();
             let mut player: Player = world.read_model(caller);
@@ -162,46 +164,45 @@ pub mod PlayerActions {
         fn get_player(self: @ContractState, player_id: u256, session_id: felt252) -> Player {
             // Validate session before proceeding (read-only validation)
             assert(session_id != 0, 'INVALID_SESSION');
-            
+
             // Get the caller's address
             let caller = get_caller_address();
-            
+
             // Read session from storage for validation
             let world = self.world_default();
             let session: SessionKey = world.read_model((session_id, caller));
-            
+
             // Validate session exists and belongs to caller
             assert(session.session_id != 0, 'SESSION_NOT_FOUND');
             assert(session.player_address == caller, 'UNAUTHORIZED_SESSION');
             assert(session.is_valid, 'SESSION_INVALID');
             assert(session.status == 0, 'SESSION_NOT_ACTIVE');
-            
+
             // Validate session has not expired
             let current_time = starknet::get_block_timestamp();
             assert(current_time < session.expires_at, 'SESSION_EXPIRED');
-            
+
             // Note: For read operations, we don't increment transaction count
             // to avoid storage writes in read-only functions
-            
+
             Default::default()
         }
 
         fn register_guild(ref self: ContractState, session_id: felt252) {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
             // TODO: Implement guild registration logic
         }
 
         fn transfer_objects(
-            ref self: ContractState, 
-            object_ids: Array<u256>, 
+            ref self: ContractState,
+            object_ids: Array<u256>,
             to: ContractAddress,
             session_id: felt252,
         ) {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
+
             // Get the caller's address (current owner of the objects)
             let caller = get_caller_address();
 
@@ -223,7 +224,7 @@ pub mod PlayerActions {
         fn refresh(ref self: ContractState, player_id: u256, session_id: felt252) {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
+
             // Get the player's address
             let player = self.get_player(player_id, session_id);
             let player_address = player.id;
@@ -276,38 +277,38 @@ pub mod PlayerActions {
         fn validate_session_for_action(ref self: ContractState, session_id: felt252) {
             // Basic validation - session_id must not be zero
             assert(session_id != 0, 'INVALID_SESSION');
-            
+
             // Get the caller's address
             let caller = get_caller_address();
-            
+
             // Read session from storage
             let mut world = self.world_default();
             let mut session: SessionKey = world.read_model((session_id, caller));
-            
+
             // Validate session exists
             assert(session.session_id != 0, 'SESSION_NOT_FOUND');
-            
+
             // Validate session belongs to the caller
             assert(session.player_address == caller, 'UNAUTHORIZED_SESSION');
-            
+
             // Validate session is active
             assert(session.is_valid, 'SESSION_INVALID');
             assert(session.status == 0, 'SESSION_NOT_ACTIVE');
-            
+
             // Validate session has not expired
             let current_time = starknet::get_block_timestamp();
             assert(current_time < session.expires_at, 'SESSION_EXPIRED');
-            
+
             // Validate session has transactions left
             assert(session.used_transactions < session.max_transactions, 'NO_TRANSACTIONS_LEFT');
-            
+
             // Check if session needs auto-renewal (less than 5 minutes remaining)
             let time_remaining = if current_time >= session.expires_at {
                 0
             } else {
                 session.expires_at - current_time
             };
-            
+
             // Auto-renew if less than 5 minutes remaining (300 seconds)
             if time_remaining < 300 {
                 // Auto-renew session for 1 hour with 100 transactions
@@ -316,10 +317,10 @@ pub mod PlayerActions {
                 updated_session.last_used = current_time;
                 updated_session.max_transactions = 100;
                 updated_session.used_transactions = 0; // Reset transaction count
-                
+
                 // Write updated session back to storage
                 world.write_model(@updated_session);
-                
+
                 // Update session reference for validation
                 session = updated_session;
             }

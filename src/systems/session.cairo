@@ -224,10 +224,7 @@ pub mod SessionActions {
 
     #[external(v0)]
     fn renew_session(
-        ref self: ContractState,
-        session_id: felt252,
-        new_duration: u64,
-        new_max_transactions: u32,
+        ref self: ContractState, session_id: felt252, new_duration: u64, new_max_transactions: u32,
     ) -> bool {
         let player = get_caller_address();
         let current_time = get_block_timestamp();
@@ -273,9 +270,7 @@ pub mod SessionActions {
 
     #[external(v0)]
     fn check_session_needs_renewal(
-        self: @ContractState,
-        session_id: felt252,
-        min_time_remaining: u64,
+        self: @ContractState, session_id: felt252, min_time_remaining: u64,
     ) -> bool {
         let player = get_caller_address();
         let current_time = get_block_timestamp();

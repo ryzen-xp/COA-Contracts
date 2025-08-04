@@ -499,7 +499,7 @@ mod tests {
         let error_invalid = 'INVALID_SESSION';
         let error_not_found = 'SESSION_NOT_FOUND';
         let error_unauthorized = 'UNAUTHORIZED_SESSION';
-        
+
         assert(error_invalid != 0, 'INVALID_SESSION');
         assert(error_not_found != 0, 'SESSION_NOT_FOUND');
         assert(error_unauthorized != 0, 'UNAUTHORIZED_SESSION');
@@ -508,7 +508,7 @@ mod tests {
     #[test]
     fn test_session_validation_comprehensive() {
         let valid_session = create_sample_session();
-        
+
         assert(valid_session.session_id != 0, 'Valid session');
         assert(valid_session.is_valid, 'Session valid');
         assert(valid_session.status == 0, 'Valid session should be active');
@@ -530,7 +530,7 @@ mod tests {
             used_transactions: 50,
             is_valid: true,
         };
-        
+
         // Calculate time remaining
         let current_time = 1400; // Simulate current time
         let time_remaining = if current_time >= session_needs_renewal.expires_at {
@@ -538,7 +538,7 @@ mod tests {
         } else {
             session_needs_renewal.expires_at - current_time
         };
-        
+
         // Should need renewal (less than 300 seconds)
         assert(time_remaining < 300, 'Session should need renewal');
     }
@@ -550,7 +550,7 @@ mod tests {
         let new_expires_at = current_time + 3600; // 1 hour
         let new_max_transactions = 100;
         let new_used_transactions = 0; // Reset to 0
-        
+
         assert(new_expires_at == 4600, 'New expiry 1 hour');
         assert(new_max_transactions == 100, 'Max trans 100');
         assert(new_used_transactions == 0, 'Reset to 0');
@@ -571,7 +571,7 @@ mod tests {
             used_transactions: 50,
             is_valid: true,
         };
-        
+
         // Calculate time remaining
         let current_time = 1100; // Simulate current time
         let time_remaining = if current_time >= session_no_renewal.expires_at {
@@ -579,7 +579,7 @@ mod tests {
         } else {
             session_no_renewal.expires_at - current_time
         };
-        
+
         // Should not need renewal (more than 300 seconds)
         assert(time_remaining >= 300, 'No renewal needed');
     }
@@ -599,7 +599,7 @@ mod tests {
             used_transactions: 50,
             is_valid: true,
         };
-        
+
         // Calculate time remaining
         let current_time = 1300; // Simulate current time
         let time_remaining = if current_time >= session_edge_case.expires_at {
@@ -607,7 +607,7 @@ mod tests {
         } else {
             session_edge_case.expires_at - current_time
         };
-        
+
         // Should need renewal (exactly 300 seconds = 5 minutes)
         assert(time_remaining == 300, 'Edge case renewal');
     }
@@ -627,7 +627,7 @@ mod tests {
             used_transactions: 50,
             is_valid: true,
         };
-        
+
         // Calculate time remaining
         let current_time = 1600; // After expiry
         let time_remaining = if current_time >= expired_session.expires_at {
@@ -635,7 +635,7 @@ mod tests {
         } else {
             expired_session.expires_at - current_time
         };
-        
+
         // Should be expired (0 seconds remaining)
         assert(time_remaining == 0, 'Session should be expired');
     }
@@ -655,14 +655,14 @@ mod tests {
             used_transactions: 95, // Almost used up
             is_valid: true,
         };
-        
+
         // Simulate auto-renewal
         let current_time = 1400;
         let new_used_transactions = 0; // Reset to 0
         let new_max_transactions = 100; // Reset to 100
-        
+
         assert(new_used_transactions == 0, 'Reset to 0');
         assert(new_max_transactions == 100, 'Max 100');
         assert(session_with_used_transactions.used_transactions == 95, 'Original 95');
     }
-} 
+}
