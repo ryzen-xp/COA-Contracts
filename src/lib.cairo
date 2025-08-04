@@ -33,6 +33,7 @@ pub mod interfaces {
 pub mod helpers {
     pub mod base;
     pub mod gear;
+    pub mod session_validation;
 }
 
 pub mod types {
@@ -48,6 +49,8 @@ pub mod market {
 pub mod test {
     pub mod session_system_test;
     pub mod pick_item_test;
+    pub mod player_session_integration_test;
+    pub mod session_helper_test;
 }
 
 pub mod traits {
