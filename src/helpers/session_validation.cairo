@@ -99,7 +99,9 @@ pub fn validate_session_parameters(session: SessionKey, caller: ContractAddress)
 }
 
 // Helper function to validate session basic parameters with custom time (for testing)
-pub fn validate_session_parameters_with_time(session: SessionKey, caller: ContractAddress, current_time: u64) -> bool {
+pub fn validate_session_parameters_with_time(
+    session: SessionKey, caller: ContractAddress, current_time: u64,
+) -> bool {
     // Check if session exists
     if session.session_id == 0 {
         return false;

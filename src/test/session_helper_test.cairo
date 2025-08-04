@@ -2,10 +2,10 @@ use starknet::ContractAddress;
 use coa::models::session::SessionKey;
 use coa::helpers::session_validation::{
     calculate_session_time_remaining, calculate_session_time_remaining_with_time,
-    is_session_expired, is_session_expired_with_time, needs_auto_renewal,
-    has_transactions_left, validate_session_parameters, validate_session_parameters_with_time,
-    get_session_status, get_session_status_with_time,
-    MIN_SESSION_DURATION, MAX_SESSION_DURATION, AUTO_RENEWAL_THRESHOLD
+    is_session_expired, is_session_expired_with_time, needs_auto_renewal, has_transactions_left,
+    validate_session_parameters, validate_session_parameters_with_time, get_session_status,
+    get_session_status_with_time, MIN_SESSION_DURATION, MAX_SESSION_DURATION,
+    AUTO_RENEWAL_THRESHOLD,
 };
 
 #[cfg(test)]
@@ -58,7 +58,7 @@ mod tests {
             status: 0,
             max_transactions: 100,
             used_transactions: 50,
-            is_valid: false, // Revoked
+            is_valid: false // Revoked
         }
     }
 
@@ -66,7 +66,7 @@ mod tests {
     fn test_calculate_session_time_remaining() {
         let session = create_valid_session();
         let time_remaining = calculate_session_time_remaining(session);
-        
+
         // Should have time remaining (expires_at: 2000, current time should be less)
         assert(time_remaining > 0, 'Should have time remaining');
     }
@@ -75,11 +75,11 @@ mod tests {
     fn test_is_session_expired() {
         let valid_session = create_valid_session();
         let expired_session = create_expired_session();
-        
+
         // Use custom time for testing
         let current_time = 1400; // Between created_at (1000) and expires_at (2000)
         assert(!is_session_expired_with_time(valid_session, current_time), 'Valid not expired');
-        
+
         // For expired session, use time after expires_at (1500)
         let expired_time = 1600; // After expires_at (1500)
         assert(is_session_expired_with_time(expired_session, expired_time), 'Expired session');
@@ -100,7 +100,7 @@ mod tests {
             used_transactions: 100, // No transactions left
             is_valid: true,
         };
-        
+
         assert(has_transactions_left(session_with_transactions), 'Has transactions');
         assert(!has_transactions_left(session_no_transactions), 'No transactions');
     }
@@ -110,15 +110,24 @@ mod tests {
         let valid_session = create_valid_session();
         let expired_session = create_expired_session();
         let revoked_session = create_revoked_session();
-        
+
         // Use custom time for testing
         let current_time = 1400; // Between created_at (1000) and expires_at (2000)
-        assert(validate_session_parameters_with_time(valid_session, sample_player(), current_time), 'Valid pass');
-        
+        assert(
+            validate_session_parameters_with_time(valid_session, sample_player(), current_time),
+            'Valid pass',
+        );
+
         // For expired session, use time after expires_at (1500)
         let expired_time = 1600; // After expires_at (1500)
-        assert(!validate_session_parameters_with_time(expired_session, sample_player(), expired_time), 'Expired fail');
-        assert(!validate_session_parameters_with_time(revoked_session, sample_player(), current_time), 'Revoked fail');
+        assert(
+            !validate_session_parameters_with_time(expired_session, sample_player(), expired_time),
+            'Expired fail',
+        );
+        assert(
+            !validate_session_parameters_with_time(revoked_session, sample_player(), current_time),
+            'Revoked fail',
+        );
     }
 
     #[test]
@@ -126,11 +135,11 @@ mod tests {
         let valid_session = create_valid_session();
         let expired_session = create_expired_session();
         let revoked_session = create_revoked_session();
-        
+
         // Use custom time for testing
         let current_time = 1400; // Between created_at (1000) and expires_at (2000)
         assert(get_session_status_with_time(valid_session, current_time) == 0, 'Status 0');
-        
+
         // For expired session, use time after expires_at (1500)
         let expired_time = 1600; // After expires_at (1500)
         assert(get_session_status_with_time(expired_session, expired_time) == 4, 'Status 4');
@@ -143,4 +152,4 @@ mod tests {
         assert(MAX_SESSION_DURATION == 86400, 'MAX_DURATION');
         assert(AUTO_RENEWAL_THRESHOLD == 300, 'RENEWAL_THRESHOLD');
     }
-} 
+}
