@@ -468,19 +468,19 @@ mod tests {
         assert(!over_limit, 'Should be over limit');
     }
 
-        // Player session integration tests - These tests demonstrate the pattern
+    // Player session integration tests - These tests demonstrate the pattern
     // for calling PlayerActions contract methods with session validation
     #[test]
     fn test_player_new_with_valid_session() {
         // Create dispatcher for PlayerActions contract
         let player_dispatcher = create_player_dispatcher();
-        
+
         // Create a valid session
         let session = create_sample_session();
         assert(session.session_id != 0, 'Session should be valid');
         assert(session.is_valid, 'Session should be valid');
         assert(session.status == 0, 'Session should be active');
-        
+
         // In a real integration test with Dojo, we would:
         // 1. Deploy the World contract
         // 2. Deploy PlayerActions as a system in the World
@@ -488,13 +488,12 @@ mod tests {
         // 4. Create a session using SessionActions.create_session_key()
         // 5. Call PlayerActions.new() through the World dispatcher
         // 6. Verify the player was created by reading from World storage
-        
+
         // For now, we validate the session structure and demonstrate the pattern
         assert(session.session_id == VALID_SESSION_ID, 'Valid session ID');
-        
         // This test demonstrates that we understand how to call contract methods
-        // In a real Dojo environment, this would be:
-        // world.execute('player_actions', 'new', array![CHAOS_MERCENARIES, session.session_id]);
+    // In a real Dojo environment, this would be:
+    // world.execute('player_actions', 'new', array![CHAOS_MERCENARIES, session.session_id]);
     }
 
     #[test]
@@ -532,10 +531,10 @@ mod tests {
         // Validate test data structure
         assert(target.len() == 1, 'Target array len');
         assert(target_types.len() == 1, 'Target types len');
-        
         // This test demonstrates the pattern for calling deal_damage
-        // In a real Dojo environment, this would be:
-        // world.execute('player_actions', 'deal_damage', array![target, target_types, with_items, session.session_id]);
+    // In a real Dojo environment, this would be:
+    // world.execute('player_actions', 'deal_damage', array![target, target_types, with_items,
+    // session.session_id]);
     }
 
     #[test]
@@ -555,10 +554,10 @@ mod tests {
 
         let player_id = 1_u256;
         assert(player_id == 1_u256, 'Valid player ID');
-        
         // This test demonstrates the pattern for calling get_player
-        // In a real Dojo environment, this would be:
-        // let player = world.execute('player_actions', 'get_player', array![player_id, session.session_id]);
+    // In a real Dojo environment, this would be:
+    // let player = world.execute('player_actions', 'get_player', array![player_id,
+    // session.session_id]);
     }
 
     #[test]
@@ -576,10 +575,9 @@ mod tests {
         // 3. Verify guild registration by reading player state from World storage
 
         assert(session.session_id == VALID_SESSION_ID, 'Valid session ID');
-        
         // This test demonstrates the pattern for calling register_guild
-        // In a real Dojo environment, this would be:
-        // world.execute('player_actions', 'register_guild', array![session.session_id]);
+    // In a real Dojo environment, this would be:
+    // world.execute('player_actions', 'register_guild', array![session.session_id]);
     }
 
     #[test]
@@ -602,10 +600,10 @@ mod tests {
 
         assert(object_ids.len() == 2, '2 objects to transfer');
         assert(to_address != contract_address_const::<0x0>(), 'Valid destination');
-        
         // This test demonstrates the pattern for calling transfer_objects
-        // In a real Dojo environment, this would be:
-        // world.execute('player_actions', 'transfer_objects', array![object_ids, to_address, session.session_id]);
+    // In a real Dojo environment, this would be:
+    // world.execute('player_actions', 'transfer_objects', array![object_ids, to_address,
+    // session.session_id]);
     }
 
     #[test]
@@ -625,10 +623,9 @@ mod tests {
 
         let player_id = 1_u256;
         assert(player_id == 1_u256, 'Valid player ID for refresh');
-        
         // This test demonstrates the pattern for calling refresh
-        // In a real Dojo environment, this would be:
-        // world.execute('player_actions', 'refresh', array![player_id, session.session_id]);
+    // In a real Dojo environment, this would be:
+    // world.execute('player_actions', 'refresh', array![player_id, session.session_id]);
     }
 
     #[test]
