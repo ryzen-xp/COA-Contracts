@@ -10,6 +10,10 @@ pub mod erc1155 {
     pub mod erc1155;
 }
 
+pub mod gear {
+    pub mod GearActions;
+}
+
 pub mod models {
     pub mod player;
     pub mod core;
@@ -29,6 +33,7 @@ pub mod interfaces {
 pub mod helpers {
     pub mod base;
     pub mod gear;
+    pub mod body;
 }
 
 pub mod types {
