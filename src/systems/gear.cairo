@@ -1,12 +1,17 @@
 #[dojo::contract]
 pub mod GearActions {
     use crate::interfaces::gear::IGear;
+    use dojo::event::EventStorage;
+    use super::super::super::models::gear::GearTrait;
+    use starknet::ContractAddress;
+    use crate::models::player::PlayerTrait;
     use starknet::get_caller_address;
     use dojo::world::WorldStorage;
     use dojo::model::ModelStorage;
     use crate::models::gear::{Gear, GearProperties, GearType};
     use crate::models::core::Operator;
     use crate::helpers::base::generate_id;
+    use crate::helpers::base::ContractAddressDefault;
 
     const GEAR: felt252 = 'GEAR';
 
@@ -15,6 +20,17 @@ pub mod GearActions {
         self._assert_admin();
         self._initialize_gear_assets(ref world);
     }
+    #[derive(Drop, Copy, Serde)]
+    #[dojo::event]
+    pub struct ItemPicked {
+        #[key]
+        pub player_id: ContractAddress,
+        #[key]
+        pub item_id: u256,
+        pub equipped: bool,
+        pub via_vehicle: bool,
+    }
+
 
     #[abi(embed_v0)]
     pub impl GearActionsImpl of IGear<ContractState> {
@@ -99,7 +115,79 @@ pub mod GearActions {
         }
 
         fn pick_items(ref self: ContractState, item_id: Array<u256>) -> Array<u256> {
-            array![]
+            let mut world = self.world_default();
+            let caller = get_caller_address();
+            let mut player: crate::models::player::Player = world.read_model(caller);
+
+            // Initialize player
+            player.init('default');
+
+            let mut successfully_picked: Array<u256> = array![];
+            let erc1155_address = ContractAddressDefault::default();
+
+            let has_vehicle = player.has_vehicle_equipped();
+
+            let mut i = 0;
+            while i < item_id.len() {
+                let item_id = *item_id.at(i);
+                let mut gear: Gear = world.read_model(item_id);
+
+                assert(gear.is_available_for_pickup(), 'Item not available');
+
+                // Check if player meets XP requirement
+                if player.xp < gear.min_xp_needed {
+                    i += 1;
+                    continue;
+                }
+
+                let mut equipped = false;
+                let mut mint_item = false;
+
+                if has_vehicle {
+                    // If player has vehicle, mint all items directly to inventory
+                    mint_item = true;
+                } else {
+                    if player.is_equippable(item_id) {
+                        PlayerTrait::equip(ref player, item_id);
+                        equipped = true;
+                        mint_item = true;
+                    } else {
+                        if player.has_free_inventory_slot() {
+                            mint_item = true;
+                        }
+                    }
+                }
+
+                if mint_item {
+                    // Mint the item to player's inventory
+                    player.mint(item_id, erc1155_address, 1);
+
+                    // Update gear ownership and spawned state
+                    gear.transfer_to(caller);
+                    world.write_model(@gear);
+
+                    // Add to successfully picked array
+                    successfully_picked.append(item_id);
+
+                    // Emit itempicked event
+                    world
+                        .emit_event(
+                            @ItemPicked {
+                                player_id: caller,
+                                item_id: item_id,
+                                equipped: equipped,
+                                via_vehicle: has_vehicle,
+                            },
+                        );
+                }
+
+                i += 1;
+            };
+
+            // Update Player state
+            world.write_model(@player);
+
+            successfully_picked
         }
     }
 
