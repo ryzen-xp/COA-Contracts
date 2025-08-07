@@ -88,6 +88,7 @@ pub mod Errors {
     pub const NOT_BUY_ITEM_OWNER_ALLOWED: felt252 = 'Item owner not_allow';
     pub const INVALID_GEAR_TYPE: felt252 = 'INVALID_GEAR_TYPE';
     pub const CONTRACT_PAUSED: felt252 = 'CONTRACT_PAUSED';
+    pub const SELLER_CANNOT_BID: felt252 = 'SELLER_CANNOT_BID';
 }
 
 // Events

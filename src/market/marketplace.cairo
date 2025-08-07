@@ -130,7 +130,6 @@ pub mod MarketplaceActions {
             config.next_market_id += 1;
 
             world.write_model(@config);
-            world.write_model(@contract);
             world.write_model(@market);
             world.write_model(@user_market);
 
@@ -206,7 +205,6 @@ pub mod MarketplaceActions {
             assert(ids.len() > 0, Errors::NO_VALID_ITEMS);
 
             world.write_model(@config);
-            world.write_model(@contract);
 
             client
                 .safe_batch_transfer_from(
@@ -397,7 +395,6 @@ pub mod MarketplaceActions {
                 active: true,
             };
 
-            world.write_model(@contract);
             world.write_model(@new_auction);
             world.write_model(@config);
 
@@ -410,13 +407,13 @@ pub mod MarketplaceActions {
             let mut world = self.world_default();
             let mut auction: Auction = world.read_model(auction_id);
             let contract: Contract = world.read_model(0);
-            let market: MarketData = world.read_model(auction.market_id);
+            let item: MarketItem = world.read_model(auction.item_id);
 
             assert(!contract.paused, Errors::CONTRACT_PAUSED);
             assert(auction.active, Errors::AUCTION_NOT_ACTIVE);
             assert(get_block_timestamp() < auction.end_time, Errors::AUCTION_ENDED);
             assert(amount > auction.highest_bid, Errors::BID_TOO_LOW);
-            assert(caller != market.owner, Errors::NOT_ITEM_OWNER);
+            assert(caller != item.owner, Errors::SELLER_CANNOT_BID);
 
             let client = IERC20Dispatcher { contract_address: contract.payment_token };
             assert(client.balance_of(caller) >= amount, Errors::INSUFFICIENT_FUNDS);
