@@ -17,7 +17,7 @@ pub mod models {
     pub mod core;
     pub mod gear;
     pub mod armour;
-    pub mod market;
+    pub mod marketplace;
     pub mod weapon_stats;
     pub mod armor_stats;
     pub mod vehicle_stats;

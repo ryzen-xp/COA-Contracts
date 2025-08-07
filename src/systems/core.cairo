@@ -26,7 +26,14 @@ pub mod CoreActions {
     const GEAR: felt252 = 'GEAR';
     const COA_CONTRACTS: felt252 = 'COA_CONTRACTS';
 
-    fn dojo_init(ref self: ContractState, admin: ContractAddress, erc1155: ContractAddress) {
+    fn dojo_init(
+        ref self: ContractState,
+        admin: ContractAddress,
+        erc1155: ContractAddress,
+        payment_token: ContractAddress,
+        escrow_address: ContractAddress,
+        registration_fee: u256,
+    ) {
         let mut world = self.world(@"coa_contracts");
 
         // Initialize admin
@@ -34,7 +41,15 @@ pub mod CoreActions {
         world.write_model(@operator);
 
         // Initialize contract configuration
-        let contract = Contract { id: COA_CONTRACTS, admin, erc1155 };
+        let contract = Contract {
+            id: COA_CONTRACTS,
+            admin,
+            erc1155,
+            payment_token,
+            escrow_address,
+            registration_fee,
+            paused: false,
+        };
         world.write_model(@contract);
     }
 
