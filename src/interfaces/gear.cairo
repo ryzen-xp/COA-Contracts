@@ -21,7 +21,9 @@ pub trait IGear<TContractState> {
     // This target type is raidable.
     fn raid(ref self: TContractState, target: u256, session_id: felt252);
     fn unequip(ref self: TContractState, item_id: Array<u256>, session_id: felt252);
-    fn get_configuration(ref self: TContractState, item_id: u256, session_id: felt252) -> Option<GearProperties>;
+    fn get_configuration(
+        ref self: TContractState, item_id: u256, session_id: felt252,
+    ) -> Option<GearProperties>;
     // This configure should take in an enum that lists all Gear Types with their structs
     // This function would be blocked at the moment, we shall use the default configuration
     // of the gameplay and how items interact with each other.
@@ -41,7 +43,9 @@ pub trait IGear<TContractState> {
     // this function forges and creates a new item id based
     fn forge(ref self: TContractState, item_ids: Array<u256>, session_id: felt252) -> u256;
     fn awaken(ref self: TContractState, exchange: Array<u256>, session_id: felt252);
-    fn can_be_awakened(ref self: TContractState, item_ids: Array<u256>, session_id: felt252) -> Span<bool>;
+    fn can_be_awakened(
+        ref self: TContractState, item_ids: Array<u256>, session_id: felt252,
+    ) -> Span<bool>;
     fn pick_items(
         ref self: TContractState, item_id: Array<u256>, session_id: felt252,
     ) -> Array<u256>; // returns an array of items that were picked
