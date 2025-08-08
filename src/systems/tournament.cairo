@@ -444,6 +444,13 @@ pub mod TournamentActions {
                 // Update session reference for validation
                 session = updated_session;
             }
+
+            // Increment transaction count for this action
+            session.used_transactions += 1;
+            session.last_used = current_time;
+
+            // Write updated session back to storage
+            world.write_model(@session);
         }
 
         fn calculate_rounds(self: @ContractState, num_players: u32) -> u32 {

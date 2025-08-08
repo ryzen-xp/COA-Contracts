@@ -318,6 +318,13 @@ pub mod GearActions {
                 // Update session reference for validation
                 session = updated_session;
             }
+
+            // Increment transaction count for this action
+            session.used_transactions += 1;
+            session.last_used = current_time;
+
+            // Write updated session back to storage
+            world.write_model(@session);
         }
 
         fn _retrieve(

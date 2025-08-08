@@ -174,3 +174,31 @@ pub fn get_session_status_with_time(session: SessionKey, current_time: u64) -> u
     }
     0 // Valid session
 }
+
+// Centralized session validation function that all systems should use
+// This ensures consistency across all systems and includes auto-renewal
+pub fn validate_session_for_action_centralized(
+    session: SessionKey, caller: ContractAddress, current_time: u64,
+) -> (bool, SessionKey) {
+    // First, validate the session using our helper
+    if !validate_session_parameters_with_time(session, caller, current_time) {
+        return (false, session);
+    }
+
+    // Check if session needs auto-renewal (less than 5 minutes remaining)
+    let time_remaining = calculate_session_time_remaining_with_time(session, current_time);
+    
+    if time_remaining < AUTO_RENEWAL_THRESHOLD && time_remaining > 0 {
+        // Auto-renew the session
+        let mut renewed_session = session;
+        renewed_session.expires_at = current_time + DEFAULT_RENEWAL_DURATION;
+        renewed_session.last_used = current_time;
+        renewed_session.max_transactions = 100; // Reset to default
+        renewed_session.used_transactions = 0; // Reset transaction count
+        
+        return (true, renewed_session);
+    }
+    
+    // Session is valid and doesn't need renewal
+    (true, session)
+}
