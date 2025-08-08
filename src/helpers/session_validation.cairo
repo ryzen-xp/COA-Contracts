@@ -1,13 +1,19 @@
 use starknet::ContractAddress;
 use starknet::get_block_timestamp;
+use super::*;
 use crate::models::session::SessionKey;
 
-// Session validation constants
-pub const MIN_SESSION_DURATION: u64 = 3600; // 1 hour
-pub const MAX_SESSION_DURATION: u64 = 86400; // 24 hours
+// Constants for session management
+pub const MIN_SESSION_DURATION: u64 = 3600; // 1 hour in seconds
+pub const MAX_SESSION_DURATION: u64 = 86400; // 24 hours in seconds
 pub const MAX_TRANSACTIONS_PER_SESSION: u32 = 1000;
-pub const AUTO_RENEWAL_THRESHOLD: u64 = 300; // 5 minutes
-pub const DEFAULT_RENEWAL_DURATION: u64 = 3600; // 1 hour
+pub const AUTO_RENEWAL_THRESHOLD: u64 = 300; // 5 minutes in seconds
+pub const DEFAULT_RENEWAL_DURATION: u64 = 3600; // 1 hour in seconds
+
+// Constants for session limits per player
+pub const MAX_ACTIVE_SESSIONS_PER_PLAYER: u32 = 5; // Maximum active sessions per player
+pub const SESSION_CLEANUP_THRESHOLD: u64 =
+    86400; // 24 hours - sessions older than this are considered inactive
 
 // Error constants for session validation
 pub const ERROR_INVALID_SESSION: felt252 = 'INVALID_SESSION';
@@ -173,4 +179,56 @@ pub fn get_session_status_with_time(session: SessionKey, current_time: u64) -> u
         return 5; // No transactions left
     }
     0 // Valid session
+}
+
+// Function to check if a player can create more sessions
+// This should be called before creating a new session
+pub fn can_player_create_session(player_sessions: Array<SessionKey>, current_time: u64) -> bool {
+    let mut active_count = 0;
+    let mut i = 0;
+    let len = player_sessions.len();
+
+    while i < len {
+        let session = player_sessions.at(i);
+
+        // Count only valid, active, non-expired sessions
+        if (*session).is_valid
+            && (*session).status == 0
+            && current_time < (*session).expires_at
+            && (*session).used_transactions < (*session).max_transactions {
+            active_count += 1;
+        }
+
+        i += 1;
+    };
+
+    return active_count < MAX_ACTIVE_SESSIONS_PER_PLAYER;
+}
+
+// Centralized session validation function that all systems should use
+// This ensures consistency across all systems and includes auto-renewal
+pub fn validate_session_for_action_centralized(
+    session: SessionKey, caller: ContractAddress, current_time: u64,
+) -> (bool, SessionKey) {
+    // First, validate the session using our helper
+    if !validate_session_parameters_with_time(session, caller, current_time) {
+        return (false, session);
+    }
+
+    // Check if session needs auto-renewal (less than 5 minutes remaining)
+    let time_remaining = calculate_session_time_remaining_with_time(session, current_time);
+
+    if time_remaining < AUTO_RENEWAL_THRESHOLD && time_remaining > 0 {
+        // Auto-renew the session
+        let mut renewed_session = session;
+        renewed_session.expires_at = current_time + DEFAULT_RENEWAL_DURATION;
+        renewed_session.last_used = current_time;
+        renewed_session.max_transactions = 100; // Reset to default
+        renewed_session.used_transactions = 0; // Reset transaction count
+
+        return (true, renewed_session);
+    }
+
+    // Session is valid and doesn't need renewal
+    (true, session)
 }

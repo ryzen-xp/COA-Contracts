@@ -11,6 +11,7 @@ pub mod SessionActions {
     const MAX_SESSION_DURATION: u64 = 86400; // 24 hours in seconds
     const MIN_SESSION_DURATION: u64 = 3600; // 1 hour in seconds
     const MAX_TRANSACTIONS_PER_SESSION: u32 = 1000;
+    const MAX_ACTIVE_SESSIONS_PER_PLAYER: u32 = 5; // Maximum active sessions per player
 
     #[external(v0)]
     fn create_session_key(
@@ -24,6 +25,12 @@ pub mod SessionActions {
         assert(session_duration <= MAX_SESSION_DURATION, 'DURATION_TOO_LONG');
         assert(max_transactions > 0, 'INVALID_MAX_TRANSACTIONS');
         assert(max_transactions <= MAX_TRANSACTIONS_PER_SESSION, 'TOO_MANY_TRANSACTIONS');
+
+        // Check session limits before creating new session
+        // For now, we'll implement a simple check - in a real implementation,
+        // you would need to iterate through all sessions for this player
+        // This is a placeholder for the session limit validation
+        // TODO: Implement proper session counting mechanism
 
         // Generate unique session ID using Poseidon hash to avoid collisions
         let mut hash_data = array![player.into(), current_time.into()];
@@ -125,78 +132,65 @@ pub mod SessionActions {
 
     // Middleware functions for game actions
     #[external(v0)]
-    fn validate_session_for_action(
-        self: @ContractState,
-        session_id: felt252,
-        player: ContractAddress,
-        session_created_at: u64,
-        session_duration: u64,
-        used_transactions: u32,
-        max_transactions: u32,
-    ) -> bool {
-        // Use the comprehensive session validation
-        validate_session(self, session_id, player)
-    }
+    fn validate_session_for_action(ref self: ContractState, session_id: felt252) {
+        // Basic validation - session_id must not be zero
+        assert(session_id != 0, 'INVALID_SESSION');
 
-    #[external(v0)]
-    fn require_valid_session(
-        self: @ContractState,
-        session_id: felt252,
-        player: ContractAddress,
-        session_created_at: u64,
-        session_duration: u64,
-        used_transactions: u32,
-        max_transactions: u32,
-    ) {
-        // Check if session is valid
-        let is_valid = session_id != 0;
-        assert(is_valid, 'INVALID_SESSION');
+        // Get the caller's address
+        let caller = get_caller_address();
 
-        // Check if session has expired
+        // Read session from storage
+        let mut world = self.world_default();
+        let mut session: SessionKey = world.read_model((session_id, caller));
+
+        // Validate session exists
+        assert(session.session_id != 0, 'SESSION_NOT_FOUND');
+
+        // Validate session belongs to the caller
+        assert(session.player_address == caller, 'UNAUTHORIZED_SESSION');
+
+        // Validate session is active
+        assert(session.is_valid, 'SESSION_INVALID');
+        assert(session.status == 0, 'SESSION_NOT_ACTIVE');
+
+        // Validate session has not expired
         let current_time = get_block_timestamp();
-        let expiry_time = session_created_at + session_duration;
-        let not_expired = current_time < expiry_time;
-        assert(not_expired, 'SESSION_EXPIRED');
+        assert(current_time < session.expires_at, 'SESSION_EXPIRED');
 
-        // Check if there are transactions left
-        let has_transactions = used_transactions < max_transactions;
-        assert(has_transactions, 'NO_TRANSACTIONS_LEFT');
+        // Validate session has transactions left
+        assert(session.used_transactions < session.max_transactions, 'NO_TRANSACTIONS_LEFT');
+
+        // Check if session needs auto-renewal (less than 5 minutes remaining)
+        let time_remaining = if current_time >= session.expires_at {
+            0
+        } else {
+            session.expires_at - current_time
+        };
+
+        // Auto-renew if less than 5 minutes remaining (300 seconds)
+        if time_remaining < 300 {
+            // Auto-renew session for 1 hour with 100 transactions
+            let mut updated_session = session;
+            updated_session.expires_at = current_time + 3600; // 1 hour
+            updated_session.last_used = current_time;
+            updated_session.max_transactions = 100;
+            updated_session.used_transactions = 0; // Reset transaction count
+
+            // Write updated session back to storage
+            world.write_model(@updated_session);
+
+            // Update session reference for validation
+            session = updated_session;
+        }
+
+        // Increment transaction count for this action
+        session.used_transactions += 1;
+        session.last_used = current_time;
+
+        // Write updated session back to storage
+        world.write_model(@session);
     }
 
-    #[external(v0)]
-    fn get_session_status(
-        self: @ContractState,
-        session_id: felt252,
-        player: ContractAddress,
-        session_created_at: u64,
-        session_duration: u64,
-        used_transactions: u32,
-        max_transactions: u32,
-    ) -> u8 {
-        // Return status: 0 = valid, 1 = expired, 2 = no transactions left, 3 = invalid session
-
-        // Check if session is valid
-        let is_valid = session_id != 0;
-        if !is_valid {
-            return 3; // Invalid session
-        }
-
-        // Check if session has expired
-        let current_time = get_block_timestamp();
-        let expiry_time = session_created_at + session_duration;
-        let not_expired = current_time < expiry_time;
-        if !not_expired {
-            return 1; // Expired
-        }
-
-        // Check if there are transactions left
-        let has_transactions = used_transactions < max_transactions;
-        if !has_transactions {
-            return 2; // No transactions left
-        }
-
-        0 // Valid session
-    }
 
     #[external(v0)]
     fn calculate_remaining_transactions(
