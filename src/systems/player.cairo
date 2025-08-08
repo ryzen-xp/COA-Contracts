@@ -493,7 +493,7 @@ pub mod PlayerActions {
                 }
 
                 world.write_model(@player);
-                let damage_received = damage - remaining_damage;
+                let _damage_received = damage - remaining_damage;
                 let damage_reduction = damage - remaining_damage;
                 let event = PlayerDamaged {
                     player_id,
