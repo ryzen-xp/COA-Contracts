@@ -74,7 +74,7 @@ pub struct SessionAutoRenewed {
     pub old_transaction_count: u32,
     pub new_transaction_count: u32,
     pub renewal_reason: felt252,
-// 'TIME_THRESHOLD', 'TRANSACTION_LIMIT'
+    // 'TIME_THRESHOLD', 'TRANSACTION_LIMIT'
 }
 
 #[derive(Copy, Drop, Serde)]
@@ -105,5 +105,5 @@ pub struct SessionPerformanceMetrics {
     pub session_efficiency_score: u32, // 0-100
     pub auto_renewal_count: u32,
     pub total_session_value: u256,
-// Estimated value of operations
+    // Estimated value of operations
 }
