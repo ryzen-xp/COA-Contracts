@@ -418,7 +418,9 @@ pub mod MarketplaceActions {
             assert(!contract.paused, Errors::CONTRACT_PAUSED);
             assert(auction.active, Errors::AUCTION_NOT_ACTIVE);
             assert(get_block_timestamp() < auction.end_time, Errors::AUCTION_ENDED);
-            assert(amount > auction.highest_bid, Errors::BID_TOO_LOW);
+            // enforce minimum 5% bid increment
+            let min_increment = auction.highest_bid * 5 / 100;
+            assert(amount >= auction.highest_bid + min_increment, Errors::BID_TOO_LOW);
             assert(caller != item.owner, Errors::SELLER_CANNOT_BID);
 
             let client = IERC20Dispatcher { contract_address: contract.payment_token };
@@ -598,7 +600,7 @@ pub mod MarketplaceActions {
             let mut world = self.world_default();
             let key = (user, day);
             let mut count: DailyCounter = world.read_model(key);
-            assert(count.counter <= 5_u256, Errors::DAILY_LIMIT_EXCEEDED);
+            assert(count.counter < 5_u256, Errors::DAILY_LIMIT_EXCEEDED);
             count.counter += 1;
             world.write_model(@count);
         }
