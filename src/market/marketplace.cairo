@@ -11,6 +11,7 @@ pub mod MarketplaceActions {
         Config, MarketData, MarketItem, Auction, UserMarket, Errors, MarketRegistered,
         ItemsMovedToMarket, GearAddedToMarket, ItemPurchased, AuctionStarted, BidPlaced,
         AuctionEnded, ItemRemovedFromMarket, ItemPriceUpdated, ConfigUpdated, PlatformFeesWithdrawn,
+        DailyCounter, SECONDS_PER_DAY,
     };
 
 
@@ -114,6 +115,11 @@ pub mod MarketplaceActions {
             let mut world = self.world_default();
             let contract: Contract = world.read_model(0);
             let mut config: Config = world.read_model(0);
+
+            let existing_market: UserMarket = world.read_model(caller);
+            assert(existing_market.market_id == 0, Errors::MARKET_ALREADY_REGISTERED);
+            assert(!contract.paused, Errors::CONTRACT_PAUSED);
+            self._increment_daily_count(caller);
 
             let market_id = config.next_market_id;
 
@@ -585,6 +591,16 @@ pub mod MarketplaceActions {
             let contract: Contract = world.read_model(0);
             IERC1155Dispatcher { contract_address: contract.erc1155 }
                 .balance_of(owner, token_id) > 0
+        }
+
+        fn _increment_daily_count(ref self: ContractState, user: ContractAddress) {
+            let day = get_block_timestamp() / SECONDS_PER_DAY;
+            let mut world = self.world_default();
+            let key = (user, day);
+            let mut count: DailyCounter = world.read_model(key);
+            assert(count.counter <= 5_u256, Errors::DAILY_LIMIT_EXCEEDED);
+            count.counter += 1;
+            world.write_model(@count);
         }
     }
 }

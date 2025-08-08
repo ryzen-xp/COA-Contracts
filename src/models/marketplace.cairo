@@ -1,4 +1,5 @@
 use starknet::ContractAddress;
+pub const SECONDS_PER_DAY: u64 = 86400;
 
 // Configuration model
 #[derive(Copy, Drop, Serde)]
@@ -9,6 +10,16 @@ pub struct Config {
     pub next_market_id: u256,
     pub next_item_id: u256,
     pub next_auction_id: u256,
+}
+
+#[derive(Copy, Drop, Serde)]
+#[dojo::model]
+pub struct DailyCounter {
+    #[key]
+    pub user: ContractAddress,
+    #[key]
+    pub day: u256,
+    pub counter: u256,
 }
 
 // Market data model
@@ -89,6 +100,8 @@ pub mod Errors {
     pub const INVALID_GEAR_TYPE: felt252 = 'INVALID_GEAR_TYPE';
     pub const CONTRACT_PAUSED: felt252 = 'CONTRACT_PAUSED';
     pub const SELLER_CANNOT_BID: felt252 = 'SELLER_CANNOT_BID';
+    pub const MARKET_ALREADY_REGISTERED: felt252 = 'MARKET_ALREADY_REGISTERED';
+    pub const DAILY_LIMIT_EXCEEDED: felt252 = 'DAILY_LIMIT_EXCEEDED';
 }
 
 // Events
