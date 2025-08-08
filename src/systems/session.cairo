@@ -126,16 +126,65 @@ pub mod SessionActions {
     // Middleware functions for game actions
     #[external(v0)]
     fn validate_session_for_action(
-        self: @ContractState,
+        ref self: ContractState,
         session_id: felt252,
-        player: ContractAddress,
-        session_created_at: u64,
-        session_duration: u64,
-        used_transactions: u32,
-        max_transactions: u32,
-    ) -> bool {
-        // Use the comprehensive session validation
-        validate_session(self, session_id, player)
+    ) {
+        // Basic validation - session_id must not be zero
+        assert(session_id != 0, 'INVALID_SESSION');
+
+        // Get the caller's address
+        let caller = get_caller_address();
+
+        // Read session from storage
+        let mut world = self.world_default();
+        let mut session: SessionKey = world.read_model((session_id, caller));
+
+        // Validate session exists
+        assert(session.session_id != 0, 'SESSION_NOT_FOUND');
+
+        // Validate session belongs to the caller
+        assert(session.player_address == caller, 'UNAUTHORIZED_SESSION');
+
+        // Validate session is active
+        assert(session.is_valid, 'SESSION_INVALID');
+        assert(session.status == 0, 'SESSION_NOT_ACTIVE');
+
+        // Validate session has not expired
+        let current_time = get_block_timestamp();
+        assert(current_time < session.expires_at, 'SESSION_EXPIRED');
+
+        // Validate session has transactions left
+        assert(session.used_transactions < session.max_transactions, 'NO_TRANSACTIONS_LEFT');
+
+        // Check if session needs auto-renewal (less than 5 minutes remaining)
+        let time_remaining = if current_time >= session.expires_at {
+            0
+        } else {
+            session.expires_at - current_time
+        };
+
+        // Auto-renew if less than 5 minutes remaining (300 seconds)
+        if time_remaining < 300 {
+            // Auto-renew session for 1 hour with 100 transactions
+            let mut updated_session = session;
+            updated_session.expires_at = current_time + 3600; // 1 hour
+            updated_session.last_used = current_time;
+            updated_session.max_transactions = 100;
+            updated_session.used_transactions = 0; // Reset transaction count
+
+            // Write updated session back to storage
+            world.write_model(@updated_session);
+
+            // Update session reference for validation
+            session = updated_session;
+        }
+
+        // Increment transaction count for this action
+        session.used_transactions += 1;
+        session.last_used = current_time;
+
+        // Write updated session back to storage
+        world.write_model(@session);
     }
 
     #[external(v0)]
