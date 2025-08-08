@@ -1,13 +1,18 @@
 use starknet::ContractAddress;
 use starknet::get_block_timestamp;
+use super::*;
 use crate::models::session::SessionKey;
 
-// Session validation constants
-pub const MIN_SESSION_DURATION: u64 = 3600; // 1 hour
-pub const MAX_SESSION_DURATION: u64 = 86400; // 24 hours
+// Constants for session management
+pub const MIN_SESSION_DURATION: u64 = 3600; // 1 hour in seconds
+pub const MAX_SESSION_DURATION: u64 = 86400; // 24 hours in seconds
 pub const MAX_TRANSACTIONS_PER_SESSION: u32 = 1000;
-pub const AUTO_RENEWAL_THRESHOLD: u64 = 300; // 5 minutes
-pub const DEFAULT_RENEWAL_DURATION: u64 = 3600; // 1 hour
+pub const AUTO_RENEWAL_THRESHOLD: u64 = 300; // 5 minutes in seconds
+pub const DEFAULT_RENEWAL_DURATION: u64 = 3600; // 1 hour in seconds
+
+// Constants for session limits per player
+pub const MAX_ACTIVE_SESSIONS_PER_PLAYER: u32 = 5; // Maximum active sessions per player
+pub const SESSION_CLEANUP_THRESHOLD: u64 = 86400; // 24 hours - sessions older than this are considered inactive
 
 // Error constants for session validation
 pub const ERROR_INVALID_SESSION: felt252 = 'INVALID_SESSION';
@@ -174,6 +179,33 @@ pub fn get_session_status_with_time(session: SessionKey, current_time: u64) -> u
     }
     0 // Valid session
 }
+
+// Function to check if a player can create more sessions
+// This should be called before creating a new session
+pub fn can_player_create_session(
+    player_sessions: Array<SessionKey>,
+    current_time: u64,
+) -> bool {
+    let mut active_count = 0;
+    let mut i = 0;
+    let len = player_sessions.len();
+    
+    while i < len {
+        let session = player_sessions.at(i);
+        
+        // Count only valid, active, non-expired sessions
+        if (*session).is_valid 
+            && (*session).status == 0 
+            && current_time < (*session).expires_at 
+            && (*session).used_transactions < (*session).max_transactions {
+            active_count += 1;
+        }
+        
+        i += 1;
+    };
+    
+    return active_count < MAX_ACTIVE_SESSIONS_PER_PLAYER;
+}  
 
 // Centralized session validation function that all systems should use
 // This ensures consistency across all systems and includes auto-renewal
