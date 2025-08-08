@@ -36,18 +36,15 @@ pub mod GearActions {
 
     #[abi(embed_v0)]
     pub impl GearActionsImpl of IGear<ContractState> {
-        fn upgrade_gear(
-            ref self: ContractState, item_id: u256, session_id: felt252,
-        ) { 
+        fn upgrade_gear(ref self: ContractState, item_id: u256, session_id: felt252) {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
             // check if the available upgrade materials `id` is present in the caller's address
-            // TODO: Security
-            // for now, you must check if if the item_id with id is available in the game.
-            // This would be done accordingly, so the item struct must have the id of the material
-            // or the ids of the list of materials that can upgrade it, and the quantity needed per
-            // level and the max level attained.
+        // TODO: Security
+        // for now, you must check if if the item_id with id is available in the game.
+        // This would be done accordingly, so the item struct must have the id of the material
+        // or the ids of the list of materials that can upgrade it, and the quantity needed per
+        // level and the max level attained.
         }
 
         fn equip(ref self: ContractState, item_id: Array<u256>, session_id: felt252) {
@@ -61,36 +58,37 @@ pub mod GearActions {
         }
 
         // unequips an item and equips another item at that slot.
-        fn exchange(ref self: ContractState, in_item_id: u256, out_item_id: u256, session_id: felt252) {
+        fn exchange(
+            ref self: ContractState, in_item_id: u256, out_item_id: u256, session_id: felt252,
+        ) {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
         }
 
-        fn refresh(
-            ref self: ContractState, session_id: felt252,
-        ) { 
+        fn refresh(ref self: ContractState, session_id: felt252) {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
             // might be moved to player. when players transfer off contract, then there's a problem
         }
 
         fn get_item_details(ref self: ContractState, item_id: u256, session_id: felt252) -> Gear {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
+
             // might not return a gear
             Default::default()
         }
-        
+
         // Some Item Details struct.
-        fn total_held_of(ref self: ContractState, gear_type: GearType, session_id: felt252) -> u256 {
+        fn total_held_of(
+            ref self: ContractState, gear_type: GearType, session_id: felt252,
+        ) -> u256 {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
+
             0
         }
-        
+
         // use the caller and read the model of both the caller, and the target
         // the target only refers to one target type for now
         // This target type is raidable.
@@ -104,10 +102,12 @@ pub mod GearActions {
             self.validate_session_for_action(session_id);
         }
 
-        fn get_configuration(ref self: ContractState, item_id: u256, session_id: felt252) -> Option<GearProperties> {
+        fn get_configuration(
+            ref self: ContractState, item_id: u256, session_id: felt252,
+        ) -> Option<GearProperties> {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
+
             Option::None
         }
 
@@ -118,28 +118,27 @@ pub mod GearActions {
         // and TODO: Add a delay for auto reload.
         // for a base gun, we default the auto reload to exactly 6 seconds...
         //
-        fn configure(ref self: ContractState, session_id: felt252) { 
+        fn configure(ref self: ContractState, session_id: felt252) {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
             // params to be completed
         }
-        
+
         fn auction(ref self: ContractState, item_ids: Array<u256>, session_id: felt252) {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
         }
-        
+
         fn dismantle(ref self: ContractState, item_ids: Array<u256>, session_id: felt252) {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
         }
-        
+
         fn transfer(ref self: ContractState, item_ids: Array<u256>, session_id: felt252) {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
         }
-        
+
         fn grant(ref self: ContractState, asset: GearType) {
             let mut world = self.world_default();
             self._assert_admin();
@@ -153,12 +152,10 @@ pub mod GearActions {
 
         // this function forges and creates a new item id based
         // normally, this function should be called only when the player is in a forging place.
-        fn forge(
-            ref self: ContractState, item_ids: Array<u256>, session_id: felt252,
-        ) -> u256 { 
+        fn forge(ref self: ContractState, item_ids: Array<u256>, session_id: felt252) -> u256 {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
+
             // should create a new asset. Perhaps deduct credits from the player.
             0
         }
@@ -168,17 +165,21 @@ pub mod GearActions {
             self.validate_session_for_action(session_id);
         }
 
-        fn can_be_awakened(ref self: ContractState, item_ids: Array<u256>, session_id: felt252) -> Span<bool> {
+        fn can_be_awakened(
+            ref self: ContractState, item_ids: Array<u256>, session_id: felt252,
+        ) -> Span<bool> {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
+
             array![].span()
         }
 
-        fn pick_items(ref self: ContractState, item_id: Array<u256>, session_id: felt252) -> Array<u256> {
+        fn pick_items(
+            ref self: ContractState, item_id: Array<u256>, session_id: felt252,
+        ) -> Array<u256> {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
+
             let mut world = self.world_default();
             let caller = get_caller_address();
             let mut player: crate::models::player::Player = world.read_model(caller);

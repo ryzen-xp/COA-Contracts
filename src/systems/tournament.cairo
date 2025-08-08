@@ -31,7 +31,11 @@ pub trait ITournament<TContractState> {
     fn register(ref self: TContractState, tournament_id: u256, session_id: felt252);
     fn unregister(ref self: TContractState, tournament_id: u256, session_id: felt252);
     fn report_match_result(
-        ref self: TContractState, tournament_id: u256, match_id: u32, winner_id: ContractAddress, session_id: felt252,
+        ref self: TContractState,
+        tournament_id: u256,
+        match_id: u32,
+        winner_id: ContractAddress,
+        session_id: felt252,
     );
     fn claim_prize(ref self: TContractState, tournament_id: u256, session_id: felt252);
 }
@@ -185,7 +189,7 @@ pub mod TournamentActions {
         fn register(ref self: ContractState, tournament_id: u256, session_id: felt252) {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
+
             let player_id = get_caller_address();
             let mut world = self.world_default();
             let mut tournament: Tournament = world.read_model(tournament_id);
@@ -237,7 +241,7 @@ pub mod TournamentActions {
         fn unregister(ref self: ContractState, tournament_id: u256, session_id: felt252) {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
-            
+
             let player_id = get_caller_address();
             let mut world = self.world_default();
             let mut tournament: Tournament = world.read_model(tournament_id);
@@ -308,7 +312,11 @@ pub mod TournamentActions {
         }
 
         fn report_match_result(
-            ref self: ContractState, tournament_id: u256, match_id: u32, winner_id: ContractAddress, session_id: felt252,
+            ref self: ContractState,
+            tournament_id: u256,
+            match_id: u32,
+            winner_id: ContractAddress,
+            session_id: felt252,
         ) {
             // Validate session before proceeding
             self.validate_session_for_action(session_id);
