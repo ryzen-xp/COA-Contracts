@@ -1,175 +1,177 @@
-// @ryzen-xp
-// NOTE:: If something meising ,I will Fix in future PRs !!
-#[starknet::contract]
-pub mod Marketplace {
-    // THis is contract Imports !!
-    use OwnableComponent::InternalTrait;
-    use starknet::event::EventEmitter;
-    use starknet::storage::{
-        StoragePointerReadAccess, StoragePointerWriteAccess, Map, StorageMapReadAccess,
-        StorageMapWriteAccess,
-    };
-    use starknet::{ContractAddress, get_caller_address, get_block_timestamp, get_contract_address};
-    use coa::models::{gear::Gear, market::{Market_data, MarketItem, Auction}};
+#[dojo::contract]
+pub mod MarketplaceActions {
     use coa::market::interface::IMarketplace;
+    use starknet::{ContractAddress, get_caller_address, get_block_timestamp, get_contract_address};
+    use dojo::model::ModelStorage;
+    use dojo::event::EventStorage;
+    use core::num::traits::Zero;
+
+
+    use crate::models::marketplace::{
+        Config, MarketData, MarketItem, Auction, UserMarket, Errors, MarketRegistered,
+        ItemsMovedToMarket, GearAddedToMarket, ItemPurchased, AuctionStarted, BidPlaced,
+        AuctionEnded, ItemRemovedFromMarket, ItemPriceUpdated, ConfigUpdated, PlatformFeesWithdrawn,
+        DailyCounter, SECONDS_PER_DAY,
+    };
+
+
+    use crate::models::gear::{Gear, GearType};
+    use crate::models::core::Contract;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
-    use openzeppelin::access::ownable::OwnableComponent;
+    use crate::erc1155::erc1155::{IERC1155MintableDispatcher, IERC1155MintableDispatcherTrait};
     use core::array::ArrayTrait;
 
 
-    component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
-    impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
-
-
-    // This is contract storage !!
-    #[storage]
-    pub struct Storage {
-        #[substorage(v0)]
-        ownable: OwnableComponent::Storage,
-        payment_token: ContractAddress, // this is token address for fees
-        erc1155_address: ContractAddress, // this is erc1155 contract address !
-        escrow_address: ContractAddress, // this is escrow address where all NFT and token is managed SOoo!!!
-        market_counter: u256, // this counter count total market added !! 
-        registation_fees: u256, //  this is fees for  new registration to market place
-        registrations: Map<u256, Market_data>, // id--> Market_data !
-        users_market: Map<
-            ContractAddress, u256,
-        >, //  user ==> market_id   ( by using user address we can fetch  attached market )
-        item_counter: u256, // this counter  used to count item that listed in market to count 
-        market_items: Map<u256, MarketItem>, //   market_id ==== > MarketItem  
-        auction_counter: u256,
-        auctions: Map<u256, Auction>,
-    }
-
-    // this is contract events !!
-    #[event]
-    #[derive(Drop, starknet::Event)]
-    enum Event {
-        #[flat]
-        OwnableEvent: OwnableComponent::Event,
-        Registration: Registration,
-        GearAddedToMarket: GearAddedToMarket,
-        ItemsMovedToMarket: ItemsMovedToMarket,
-        ItemPurchased: ItemPurchased,
-        AuctionStarted: AuctionStarted,
-        BidPlaced: BidPlaced,
-        AuctionEnded: AuctionEnded,
-    }
-
-    // THis is events  struct !!
-
-    #[derive(Drop, starknet::Event)]
-    pub struct Registration {
-        pub id: u256,
-        pub owner: ContractAddress,
-        pub is_auction: bool,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    pub struct GearAddedToMarket {
-        pub item_id: u256,
-        pub market_id: u256,
-        pub seller: ContractAddress,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    pub struct ItemsMovedToMarket {
-        pub market_id: u256,
-        pub item_ids: Array<u256>,
-        pub seller: ContractAddress,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    pub struct ItemPurchased {
-        pub buyer: ContractAddress,
-        pub seller: ContractAddress,
-        pub item_id: u256,
-        pub quantity: u256,
-        pub total_price: u256,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    pub struct AuctionStarted {
-        pub auction_id: u256,
-        pub item_id: u256,
-        pub market_id: u256,
-        pub end_time: u64,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    pub struct BidPlaced {
-        pub auction_id: u256,
-        pub bidder: ContractAddress,
-        pub amount: u256,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    pub struct AuctionEnded {
-        pub auction_id: u256,
-        pub winner: ContractAddress,
-        pub final_bid: u256,
-    }
-
-
-    // This is contract Constractor !!
-    #[constructor]
-    fn constructor(
-        ref self: ContractState,
-        payment_token: ContractAddress,
-        owner: ContractAddress,
-        erc1155_address: ContractAddress,
-        escrow: ContractAddress,
-    ) {
-        self.ownable.initializer(owner);
-        self.payment_token.write(payment_token);
-        self.erc1155_address.write(erc1155_address);
-        self.escrow_address.write(escrow);
-    }
-
     #[abi(embed_v0)]
-    pub impl MarketplaceImpl of IMarketplace<ContractState> {
+    impl MarketplaceImpl of IMarketplace<ContractState> {
+        fn init(ref self: ContractState) {
+            let mut world = self.world_default();
+            let contract: Contract = world.read_model(0);
+            let admin = get_caller_address();
+
+            assert(contract.admin == admin, Errors::UNAUTHORIZED_CALLER);
+
+            let config = Config { id: 0, next_market_id: 1, next_item_id: 1, next_auction_id: 1 };
+
+            world.write_model(@config);
+        }
+
+        fn set_admin(ref self: ContractState, new_admin: ContractAddress) {
+            let mut world = self.world_default();
+            let mut contract: Contract = world.read_model(0);
+            assert(get_caller_address() == contract.admin, Errors::NOT_ADMIN);
+            contract.admin = new_admin;
+            world.write_model(@contract);
+        }
+
+        fn update_config(
+            ref self: ContractState,
+            payment_token: ContractAddress,
+            erc1155_address: ContractAddress,
+            escrow_address: ContractAddress,
+            registration_fee: u256,
+        ) {
+            let mut world = self.world_default();
+            let mut contract: Contract = world.read_model(0);
+            let caller = get_caller_address();
+            assert(caller == contract.admin, Errors::NOT_ADMIN);
+
+            contract.payment_token = payment_token;
+            contract.erc1155 = erc1155_address;
+            contract.escrow_address = escrow_address;
+            contract.registration_fee = registration_fee;
+            world.write_model(@contract);
+
+            let event = ConfigUpdated {
+                payment_token, erc1155_address, escrow_address, registration_fee,
+            };
+            world.emit_event(@event);
+        }
+
+        fn withdraw_platform_fees(ref self: ContractState, to: ContractAddress, amount: u256) {
+            let mut world = self.world_default();
+            let contract: Contract = world.read_model(0);
+            let caller = get_caller_address();
+            assert(caller == contract.admin, Errors::NOT_ADMIN);
+
+            let client = IERC20Dispatcher { contract_address: contract.payment_token };
+            let contract_address = get_contract_address();
+            let contract_balance = client.balance_of(contract_address);
+            assert(amount <= contract_balance, Errors::INSUFFICIENT_BALANCE);
+
+            client.transfer(to, amount);
+
+            let event = PlatformFeesWithdrawn { to, amount, withdrawn_by: caller };
+            world.emit_event(@event);
+        }
+
+        // Emergency Pause
+        fn pause_marketplace(ref self: ContractState) {
+            let mut world = self.world_default();
+            let mut contract: Contract = world.read_model(0);
+            let caller = get_caller_address();
+            assert(caller == contract.admin, Errors::NOT_ADMIN);
+
+            contract.paused = true;
+            world.write_model(@contract);
+        }
+
+        // Emergency Unpause
+        fn unpause_marketplace(ref self: ContractState) {
+            let mut world = self.world_default();
+            let mut contract: Contract = world.read_model(0);
+            let caller = get_caller_address();
+            assert(caller == contract.admin, Errors::NOT_ADMIN);
+
+            contract.paused = false;
+            world.write_model(@contract);
+        }
+
+        // Public Functions
+
         fn register_market(ref self: ContractState, is_auction: bool) -> u256 {
             let caller = get_caller_address();
-            let mut old_counter = self.market_counter.read();
-            let registration_fee = self.registation_fees.read();
-            let payment_token = self.payment_token.read();
-            let client = IERC20Dispatcher { contract_address: payment_token };
+            let mut world = self.world_default();
+            let contract: Contract = world.read_model(0);
+            let mut config: Config = world.read_model(0);
 
-            assert(client.balance_of(caller) > registration_fee, 'Insufficent_Balance_caller');
+            let existing_market: UserMarket = world.read_model(caller);
+            assert(existing_market.market_id == 0, Errors::MARKET_ALREADY_REGISTERED);
+            assert(!contract.paused, Errors::CONTRACT_PAUSED);
+            self._increment_daily_count(caller);
 
-            let new_counter = old_counter + 1;
+            let market_id = config.next_market_id;
 
-            client.transfer_from(caller, get_contract_address(), registration_fee);
-
-            let data = Market_data {
-                market_id: new_counter,
+            let market = MarketData {
+                market_id,
                 owner: caller,
                 is_auction,
                 is_active: true,
                 registration_timestamp: get_block_timestamp(),
             };
 
-            self.market_counter.write(new_counter);
-            self.registrations.write(new_counter, data);
-            self.users_market.write(caller, new_counter);
+            let user_market = UserMarket { user: caller, market_id };
 
-            self.emit(Registration { id: new_counter, owner: caller, is_auction });
+            config.next_market_id += 1;
 
-            new_counter
+            world.write_model(@config);
+            world.write_model(@market);
+            world.write_model(@user_market);
+
+            if caller != contract.admin {
+                let client = IERC20Dispatcher { contract_address: contract.payment_token };
+                assert(
+                    client.balance_of(caller) >= contract.registration_fee,
+                    Errors::INSUFFICIENT_BALANCE,
+                );
+
+                client.transfer_from(caller, get_contract_address(), contract.registration_fee);
+            }
+
+            let event = MarketRegistered { market_id, owner: caller, is_auction };
+            world.emit_event(@event);
+
+            market_id
         }
-        // this is I think used to list  tthe item for sell  with
+
         fn move_to_market(ref self: ContractState, item_ids: Array<u256>, prices: Array<u256>) {
             let caller = get_caller_address();
-            let market_id = self.users_market.read(caller);
-            assert(market_id != 0, 'No_Market_Registered');
-            assert(item_ids.len() == prices.len(), 'Invalid_prices_items_size');
+            let mut world = self.world_default();
+            let contract: Contract = world.read_model(0);
+            let mut config: Config = world.read_model(0);
+            let user_market: UserMarket = world.read_model(caller);
+            let market_id = user_market.market_id;
 
-            let market = self.registrations.read(market_id);
-            assert(market.owner == caller, 'Unauthorized_caller');
-            assert(market.is_active, 'Market_Inactive');
+            assert(!contract.paused, Errors::CONTRACT_PAUSED);
+            assert(market_id != 0, Errors::NO_MARKET_REGISTERED);
+            assert(item_ids.len() == prices.len(), Errors::INVALID_PRICES_SIZE);
 
-            let client = IERC1155Dispatcher { contract_address: self.erc1155_address.read() };
+            let market: MarketData = world.read_model(market_id);
+            assert(market.owner == caller, Errors::UNAUTHORIZED_CALLER);
+            assert(market.is_active, Errors::MARKET_INACTIVE);
+
+            let client = IERC1155Dispatcher { contract_address: contract.erc1155 };
 
             let mut ids: Array<u256> = array![];
             let mut amounts: Array<u256> = array![];
@@ -186,199 +188,421 @@ pub mod Marketplace {
                     ids.append(id);
                     amounts.append(1_u256);
 
-                    // Create a new MarketItem entry for each NFT
-                    let mut item_id = self.item_counter.read() + 1;
-                    self.item_counter.write(item_id);
+                    let item_id = config.next_item_id;
+                    config.next_item_id += 1;
 
                     let market_item = MarketItem {
                         item_id,
                         market_id,
+                        token_id: id,
                         owner: caller,
-                        price: price,
+                        price,
                         quantity: 1_u256,
                         is_available: true,
                         is_auction_item: market.is_auction,
                     };
 
-                    self.market_items.write(item_id, market_item);
+                    world.write_model(@market_item);
                 }
 
                 i += 1;
             };
 
-            assert(ids.len() > 0, 'No_Valid_Items_To_Move');
+            assert(ids.len() > 0, Errors::NO_VALID_ITEMS);
+
+            world.write_model(@config);
 
             client
                 .safe_batch_transfer_from(
                     caller,
-                    self.escrow_address.read(),
+                    contract.escrow_address,
                     ids.span(),
                     amounts.span(),
                     ArrayTrait::new().span(),
                 );
 
-            self.emit(ItemsMovedToMarket { market_id, item_ids: ids, seller: caller });
+            let event = ItemsMovedToMarket { market_id, item_ids: ids, seller: caller };
+            world.emit_event(@event);
         }
 
+        fn add_to_market(ref self: ContractState, gear: Gear, price: u256, quantity: u256) {
+            let caller = get_caller_address();
+            let mut world = self.world_default();
 
-        fn add_to_market(ref self: ContractState, gear: Gear) {
-            self.ownable.assert_only_owner();
-            // I don't understand this ?? , I will fix this in future PRs !!
+            let mut contract: Contract = world.read_model(0);
+            let mut config: Config = world.read_model(0);
+            assert(!contract.paused, Errors::CONTRACT_PAUSED);
+            assert(caller == contract.admin, Errors::NOT_ADMIN);
+
+            let user_market: UserMarket = world.read_model(caller);
+            assert(user_market.market_id > 0, Errors::NO_MARKET_REGISTERED);
+            let market_id = user_market.market_id;
+
+            let market: MarketData = world.read_model(market_id);
+            assert(market.is_active, Errors::MARKET_INACTIVE);
+
+            let gear_type = crate::helpers::gear::parse_id(gear.id);
+            assert(gear_type != GearType::None, Errors::INVALID_GEAR_TYPE);
+
+            let item_id = config.next_item_id;
+            config.next_item_id += 1;
+
+            let market_item = MarketItem {
+                item_id,
+                market_id,
+                token_id: gear.id,
+                owner: caller,
+                price,
+                quantity,
+                is_available: true,
+                is_auction_item: market.is_auction,
+            };
+
+            world.write_model(@config);
+            world.write_model(@market_item);
+
+            let erc1155 = IERC1155MintableDispatcher { contract_address: contract.erc1155 };
+            erc1155.mint(contract.escrow_address, gear.id, quantity, ArrayTrait::new().span());
+
+            let event = GearAddedToMarket { item_id, market_id, seller: caller };
+            world.emit_event(@event);
         }
 
         fn purchase_item(ref self: ContractState, item_id: u256, quantity: u256) {
             let caller = get_caller_address();
+            let mut world = self.world_default();
+            let mut item: MarketItem = world.read_model(item_id);
+            let contract: Contract = world.read_model(0);
 
-            // Fetch the item
-            let mut item = self.market_items.read(item_id);
-            assert(item.is_available, 'Item_Not_Available');
-            assert(quantity > 0, 'Invalid_Quantity');
-            assert(item.quantity >= quantity, 'Not_Enough_Stock');
+            assert(!contract.paused, Errors::CONTRACT_PAUSED);
+            assert(item.is_available, Errors::ITEM_NOT_AVAILABLE);
+            assert(quantity > 0, Errors::INVALID_QUANTITY);
+            assert(item.quantity >= quantity, Errors::NOT_ENOUGH_STOCK);
+            assert(!item.is_auction_item, Errors::ITEM_IS_AUCTION_ONLY);
+            assert(item.owner != caller, Errors::NOT_BUY_ITEM_OWNER_ALLOWED);
 
             let total_price = item.price * quantity;
-            assert(total_price > 0, 'Invalid_Price');
-
-            // Check buyer balance
-            let token = self.payment_token.read();
-            let client = IERC20Dispatcher { contract_address: token };
-            assert(client.balance_of(caller) >= total_price, 'Insufficient_Balance');
-
-            // Transfer payment from buyer to seller
-            client.transfer_from(caller, item.owner, total_price);
-
-            // Transfer NFT from escrow to buyer
-            IERC1155Dispatcher { contract_address: self.erc1155_address.read() }
-                .safe_transfer_from(
-                    self.escrow_address.read(),
-                    caller,
-                    item.item_id,
-                    quantity,
-                    ArrayTrait::new().span(),
-                );
+            assert(total_price > 0, Errors::INVALID_PRICE);
 
             item.quantity -= quantity;
             if item.quantity == 0 {
                 item.is_available = false;
             }
+            world.write_model(@item);
 
-            self
-                .emit(
-                    ItemPurchased {
-                        buyer: caller, seller: item.owner, item_id, quantity, total_price,
-                    },
+            let client = IERC20Dispatcher { contract_address: contract.payment_token };
+            assert(client.balance_of(caller) >= total_price, Errors::INSUFFICIENT_BALANCE);
+            client.transfer_from(caller, item.owner, total_price);
+
+            IERC1155Dispatcher { contract_address: contract.erc1155 }
+                .safe_transfer_from(
+                    contract.escrow_address,
+                    caller,
+                    item.token_id,
+                    quantity,
+                    ArrayTrait::new().span(),
                 );
-            self.market_items.write(item_id, item);
+
+            let event = ItemPurchased {
+                buyer: caller, seller: item.owner, item_id, quantity, total_price,
+            };
+            world.emit_event(@event);
         }
 
+        fn update_item_price(ref self: ContractState, item_id: u256, new_price: u256) {
+            let caller = get_caller_address();
+            let mut world = self.world_default();
+            let contract: Contract = world.read_model(0);
+
+            assert(!contract.paused, Errors::CONTRACT_PAUSED);
+
+            let mut item: MarketItem = world.read_model(item_id);
+
+            assert(item.owner == caller, Errors::NOT_ITEM_OWNER);
+            assert(item.is_available, Errors::ITEM_NOT_AVAILABLE);
+            assert(new_price > 0, Errors::INVALID_PRICE);
+
+            let old_price = item.price;
+            item.price = new_price;
+            world.write_model(@item);
+
+            let event = ItemPriceUpdated { item_id, old_price, new_price, owner: caller };
+            world.emit_event(@event);
+        }
+
+        fn bulk_update_prices(
+            ref self: ContractState, item_ids: Array<u256>, new_prices: Array<u256>,
+        ) {
+            let caller = get_caller_address();
+            let mut world = self.world_default();
+            let contract: Contract = world.read_model(0);
+
+            assert(!contract.paused, Errors::CONTRACT_PAUSED);
+            assert(item_ids.len() == new_prices.len(), Errors::INVALID_PRICES_SIZE);
+
+            let mut i = 0;
+            loop {
+                if i >= item_ids.len() {
+                    break;
+                }
+                let item_id = *item_ids.at(i);
+                let new_price = *new_prices.at(i);
+
+                let mut item: MarketItem = world.read_model(item_id);
+
+                assert(item.owner == caller, Errors::NOT_ITEM_OWNER);
+                assert(item.is_available, Errors::ITEM_NOT_AVAILABLE);
+                assert(new_price > 0, Errors::INVALID_PRICE);
+
+                let old_price = item.price;
+                item.price = new_price;
+                world.write_model(@item);
+
+                let event = ItemPriceUpdated { item_id, old_price, new_price, owner: caller };
+                world.emit_event(@event);
+
+                i += 1;
+            }
+        }
 
         fn start_auction(
             ref self: ContractState, item_id: u256, duration: u64, starting_bid: u256,
         ) {
             let caller = get_caller_address();
+            let mut world = self.world_default();
+            let user_market: UserMarket = world.read_model(caller);
+            let mut contract: Contract = world.read_model(0);
+            let mut config: Config = world.read_model(0);
+            let market_id = user_market.market_id;
 
-            let market_id = self.users_market.read(caller);
-            assert(market_id != 0, 'No_Market_Registered');
+            assert(!contract.paused, Errors::CONTRACT_PAUSED);
+            assert(market_id != 0, Errors::NO_MARKET_REGISTERED);
 
-            let market = self.registrations.read(market_id);
-            assert(market.owner == caller, 'Unauthorized');
-            assert(market.is_auction, 'Market_Not_Auction_Enabled');
+            let market: MarketData = world.read_model(market_id);
+            assert(market.owner == caller, Errors::UNAUTHORIZED_CALLER);
+            assert(market.is_auction, Errors::MARKET_NOT_AUCTION);
 
-            let item = self.market_items.read(item_id);
-            assert(item.owner == caller, 'Not_Item_Owner');
-            assert(item.is_available, 'Item_Not_Listed');
+            let item: MarketItem = world.read_model(item_id);
+            assert(item.owner == caller, Errors::NOT_ITEM_OWNER);
+            assert(item.is_available, Errors::ITEM_NOT_LISTED);
+            assert(item.is_auction_item, Errors::ITEM_NOT_AUCTION_ITEM);
 
-            let auction_id = self.auction_counter.read() + 1;
-            self.auction_counter.write(auction_id);
+            let auction_id = config.next_auction_id;
+            config.next_auction_id += 1;
 
+            let end_time = get_block_timestamp() + duration;
             let new_auction = Auction {
                 auction_id,
                 market_id,
                 item_id,
                 highest_bid: starting_bid,
                 highest_bidder: caller,
-                end_time: get_block_timestamp() + duration,
+                end_time,
                 active: true,
             };
-            self.auctions.write(auction_id, new_auction);
 
-            self
-                .emit(
-                    AuctionStarted {
-                        auction_id, item_id, market_id, end_time: get_block_timestamp() + duration,
-                    },
-                );
+            world.write_model(@new_auction);
+            world.write_model(@config);
+
+            let event = AuctionStarted { auction_id, item_id, market_id, end_time };
+            world.emit_event(@event);
         }
-
 
         fn place_bid(ref self: ContractState, auction_id: u256, amount: u256) {
             let caller = get_caller_address();
-            let mut auction = self.auctions.read(auction_id);
+            let mut world = self.world_default();
+            let mut auction: Auction = world.read_model(auction_id);
+            let contract: Contract = world.read_model(0);
+            let item: MarketItem = world.read_model(auction.item_id);
 
-            assert(auction.active, 'Auction_Not_Active');
-            assert(get_block_timestamp() < auction.end_time, 'Auction_Ended');
-            assert(amount > auction.highest_bid, 'Bid_Too_Low');
+            assert(!contract.paused, Errors::CONTRACT_PAUSED);
+            assert(auction.active, Errors::AUCTION_NOT_ACTIVE);
+            assert(get_block_timestamp() < auction.end_time, Errors::AUCTION_ENDED);
+            // enforce minimum 5% bid increment
+            let min_increment = auction.highest_bid * 5 / 100;
+            assert(amount >= auction.highest_bid + min_increment, Errors::BID_TOO_LOW);
+            assert(caller != item.owner, Errors::SELLER_CANNOT_BID);
 
-            let token = self.payment_token.read();
-            let client = IERC20Dispatcher { contract_address: token };
-            assert(client.balance_of(caller) >= amount, 'Insufficient_Funds');
+            let client = IERC20Dispatcher { contract_address: contract.payment_token };
+            assert(client.balance_of(caller) >= amount, Errors::INSUFFICIENT_FUNDS);
 
-            // Refund previous highest bidder
-            if auction.highest_bidder != self.market_items.read(auction.market_id).owner {
+            // Refund previous highest bidder if not seller
+            let item: MarketItem = world.read_model(auction.item_id);
+            if auction.highest_bidder != item.owner {
                 client.transfer(auction.highest_bidder, auction.highest_bid);
             }
 
-            // Take new bid
-            client.transfer_from(caller, get_contract_address(), amount);
-
             auction.highest_bid = amount;
             auction.highest_bidder = caller;
-            self.auctions.write(auction_id, auction);
+            world.write_model(@auction);
 
-            self.emit(BidPlaced { auction_id, bidder: caller, amount });
+            client.transfer_from(caller, get_contract_address(), amount);
+
+            let event = BidPlaced { auction_id, bidder: caller, amount };
+            world.emit_event(@event);
         }
 
         fn end_auction(ref self: ContractState, auction_id: u256) {
-            let mut auction = self.auctions.read(auction_id);
+            let mut world = self.world_default();
+            let mut auction: Auction = world.read_model(auction_id);
+            let contract: Contract = world.read_model(0);
 
-            assert(auction.active, 'Auction_Not_Active');
-            assert(get_block_timestamp() >= auction.end_time, 'Auction_Not_Ended');
+            assert(auction.active, Errors::AUCTION_NOT_ACTIVE);
+            assert(get_block_timestamp() >= auction.end_time, Errors::AUCTION_NOT_ENDED);
 
             auction.active = false;
 
-            // Transfer payment to seller
-            let item = self.market_items.read(auction.item_id);
-            let client = IERC20Dispatcher { contract_address: self.payment_token.read() };
+            let mut item: MarketItem = world.read_model(auction.item_id);
+
+            item.is_available = false;
+            item.quantity = 0;
+
+            world.write_model(@auction);
+            world.write_model(@item);
+
+            let client = IERC20Dispatcher { contract_address: contract.payment_token };
             client.transfer(item.owner, auction.highest_bid);
 
-            // Transfer NFT to winner
-            IERC1155Dispatcher { contract_address: self.erc1155_address.read() }
+            IERC1155Dispatcher { contract_address: contract.erc1155 }
                 .safe_transfer_from(
-                    self.escrow_address.read(),
+                    contract.escrow_address,
                     auction.highest_bidder,
-                    auction.item_id,
+                    item.token_id,
                     1_u256,
                     ArrayTrait::new().span(),
                 );
 
-            self
-                .emit(
-                    AuctionEnded {
-                        auction_id, winner: auction.highest_bidder, final_bid: auction.highest_bid,
-                    },
+            let event = AuctionEnded {
+                auction_id, winner: auction.highest_bidder, final_bid: auction.highest_bid,
+            };
+            world.emit_event(@event);
+        }
+
+        fn remove_item_from_market(ref self: ContractState, item_id: u256) {
+            let caller = get_caller_address();
+            let mut world = self.world_default();
+
+            let mut item: MarketItem = world.read_model(item_id);
+            let contract: Contract = world.read_model(0);
+            let market: MarketData = world.read_model(item.market_id);
+
+            assert(item.owner == caller, Errors::NOT_ITEM_OWNER);
+            assert(item.is_available, Errors::ITEM_NOT_AVAILABLE);
+            assert(market.owner == caller, Errors::UNAUTHORIZED_CALLER);
+            assert(market.is_active, Errors::MARKET_INACTIVE);
+
+            item.is_available = false;
+            world.write_model(@item);
+
+            IERC1155Dispatcher { contract_address: contract.erc1155 }
+                .safe_transfer_from(
+                    contract.escrow_address,
+                    caller,
+                    item.token_id,
+                    item.quantity,
+                    ArrayTrait::new().span(),
                 );
 
-            self.auctions.write(auction_id, auction);
+            let event = ItemRemovedFromMarket { item_id, owner: caller };
+            world.emit_event(@event);
+        }
+
+        fn bulk_remove_items(ref self: ContractState, item_ids: Array<u256>) {
+            let caller = get_caller_address();
+            let mut world = self.world_default();
+            let contract: Contract = world.read_model(0);
+
+            let mut i = 0;
+            loop {
+                if i >= item_ids.len() {
+                    break;
+                }
+                let item_id = *item_ids.at(i);
+                let mut item: MarketItem = world.read_model(item_id);
+                let market: MarketData = world.read_model(item.market_id);
+
+                if item.owner == caller
+                    && item.is_available
+                    && market.owner == caller
+                    && market.is_active {
+                    item.is_available = false;
+                    world.write_model(@item);
+
+                    IERC1155Dispatcher { contract_address: contract.erc1155 }
+                        .safe_transfer_from(
+                            contract.escrow_address,
+                            caller,
+                            item.token_id,
+                            item.quantity,
+                            ArrayTrait::new().span(),
+                        );
+
+                    let event = ItemRemovedFromMarket { item_id, owner: caller };
+                    world.emit_event(@event);
+                }
+
+                i += 1;
+            }
+        }
+
+        // View functions
+        fn get_market_data(self: @ContractState, market_id: u256) -> MarketData {
+            let world = self.world_default();
+            world.read_model(market_id)
+        }
+
+        fn get_market_item(self: @ContractState, item_id: u256) -> MarketItem {
+            let world = self.world_default();
+            world.read_model(item_id)
+        }
+
+        fn get_auction(self: @ContractState, auction_id: u256) -> Auction {
+            let world = self.world_default();
+            world.read_model(auction_id)
+        }
+
+        fn get_user_market(self: @ContractState, user: ContractAddress) -> u256 {
+            let world = self.world_default();
+            let user_market: UserMarket = world.read_model(user);
+            user_market.market_id
+        }
+
+        fn get_counters(self: @ContractState) -> (u256, u256, u256) {
+            let world = self.world_default();
+            let config: Config = world.read_model(0);
+            (config.next_market_id, config.next_item_id, config.next_auction_id)
+        }
+
+        fn get_config(self: @ContractState) -> Config {
+            let world = self.world_default();
+            world.read_model(0)
         }
     }
 
+
     #[generate_trait]
-    impl InternalMarketplace of InternalMarketplaceTrait {
-        //  In this function we check  owner have item > 0 so
+    impl InternalImpl of InternalTrait {
+        fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
+            self.world(@"coa")
+        }
+
         fn _check_item_ownership(
-            ref self: ContractState, item: u256, owner: ContractAddress,
+            ref self: ContractState, token_id: u256, owner: ContractAddress,
         ) -> bool {
-            IERC1155Dispatcher { contract_address: self.erc1155_address.read() }
-                .balance_of(owner, item) > 0
+            let world = self.world_default();
+            let contract: Contract = world.read_model(0);
+            IERC1155Dispatcher { contract_address: contract.erc1155 }
+                .balance_of(owner, token_id) > 0
+        }
+
+        fn _increment_daily_count(ref self: ContractState, user: ContractAddress) {
+            let day = get_block_timestamp() / SECONDS_PER_DAY;
+            let mut world = self.world_default();
+            let key = (user, day);
+            let mut count: DailyCounter = world.read_model(key);
+            assert(count.counter < 5_u256, Errors::DAILY_LIMIT_EXCEEDED);
+            count.counter += 1;
+            world.write_model(@count);
         }
     }
 }
