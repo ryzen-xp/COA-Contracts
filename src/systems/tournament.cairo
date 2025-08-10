@@ -28,12 +28,16 @@ pub trait ITournament<TContractState> {
     );
 
     // --- Player Actions ---
-    fn register(ref self: TContractState, tournament_id: u256);
-    fn unregister(ref self: TContractState, tournament_id: u256);
+    fn register(ref self: TContractState, tournament_id: u256, session_id: felt252);
+    fn unregister(ref self: TContractState, tournament_id: u256, session_id: felt252);
     fn report_match_result(
-        ref self: TContractState, tournament_id: u256, match_id: u32, winner_id: ContractAddress,
+        ref self: TContractState,
+        tournament_id: u256,
+        match_id: u32,
+        winner_id: ContractAddress,
+        session_id: felt252,
     );
-    fn claim_prize(ref self: TContractState, tournament_id: u256);
+    fn claim_prize(ref self: TContractState, tournament_id: u256, session_id: felt252);
 }
 
 #[dojo::contract]
@@ -56,6 +60,8 @@ pub mod TournamentActions {
     use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
     use core::option::OptionTrait;
     use core::array::ArrayTrait;
+    // Import session model for validation
+    use crate::models::session::SessionKey;
 
 
     #[abi(embed_v0)]
@@ -180,7 +186,10 @@ pub mod TournamentActions {
             world.emit_event(@event);
         }
 
-        fn register(ref self: ContractState, tournament_id: u256) {
+        fn register(ref self: ContractState, tournament_id: u256, session_id: felt252) {
+            // Validate session before proceeding
+            self.validate_session_for_action(session_id);
+
             let player_id = get_caller_address();
             let mut world = self.world_default();
             let mut tournament: Tournament = world.read_model(tournament_id);
@@ -229,7 +238,10 @@ pub mod TournamentActions {
             world.emit_event(@event);
         }
 
-        fn unregister(ref self: ContractState, tournament_id: u256) {
+        fn unregister(ref self: ContractState, tournament_id: u256, session_id: felt252) {
+            // Validate session before proceeding
+            self.validate_session_for_action(session_id);
+
             let player_id = get_caller_address();
             let mut world = self.world_default();
             let mut tournament: Tournament = world.read_model(tournament_id);
@@ -300,8 +312,14 @@ pub mod TournamentActions {
         }
 
         fn report_match_result(
-            ref self: ContractState, tournament_id: u256, match_id: u32, winner_id: ContractAddress,
+            ref self: ContractState,
+            tournament_id: u256,
+            match_id: u32,
+            winner_id: ContractAddress,
+            session_id: felt252,
         ) {
+            // Validate session before proceeding
+            self.validate_session_for_action(session_id);
             let mut world = self.world_default();
             let match_key = (tournament_id, match_id);
             let mut match_: Match = world.read_model(match_key);
@@ -349,7 +367,9 @@ pub mod TournamentActions {
             world.emit_event(@event);
         }
 
-        fn claim_prize(ref self: ContractState, tournament_id: u256) {
+        fn claim_prize(ref self: ContractState, tournament_id: u256, session_id: felt252) {
+            // Validate session before proceeding
+            self.validate_session_for_action(session_id);
             let player_id = get_caller_address();
             let mut world = self.world_default();
             let winner_key = (tournament_id, player_id);
@@ -380,6 +400,65 @@ pub mod TournamentActions {
     impl InternalImpl of InternalTrait {
         fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
             self.world(@"coa")
+        }
+
+        fn validate_session_for_action(ref self: ContractState, session_id: felt252) {
+            // Basic validation - session_id must not be zero
+            assert(session_id != 0, 'INVALID_SESSION');
+
+            // Get the caller's address
+            let caller = get_caller_address();
+
+            // Read session from storage
+            let mut world = self.world_default();
+            let mut session: SessionKey = world.read_model((session_id, caller));
+
+            // Validate session exists
+            assert(session.session_id != 0, 'SESSION_NOT_FOUND');
+
+            // Validate session belongs to the caller
+            assert(session.player_address == caller, 'UNAUTHORIZED_SESSION');
+
+            // Validate session is active
+            assert(session.is_valid, 'SESSION_INVALID');
+            assert(session.status == 0, 'SESSION_NOT_ACTIVE');
+
+            // Validate session has not expired
+            let current_time = starknet::get_block_timestamp();
+            assert(current_time < session.expires_at, 'SESSION_EXPIRED');
+
+            // Validate session has transactions left
+            assert(session.used_transactions < session.max_transactions, 'NO_TRANSACTIONS_LEFT');
+
+            // Check if session needs auto-renewal (less than 5 minutes remaining)
+            let time_remaining = if current_time >= session.expires_at {
+                0
+            } else {
+                session.expires_at - current_time
+            };
+
+            // Auto-renew if less than 5 minutes remaining (300 seconds)
+            if time_remaining < 300 {
+                // Auto-renew session for 1 hour with 100 transactions
+                let mut updated_session = session;
+                updated_session.expires_at = current_time + 3600; // 1 hour
+                updated_session.last_used = current_time;
+                updated_session.max_transactions = 100;
+                updated_session.used_transactions = 0; // Reset transaction count
+
+                // Write updated session back to storage
+                world.write_model(@updated_session);
+
+                // Update session reference for validation
+                session = updated_session;
+            }
+
+            // Increment transaction count for this action
+            session.used_transactions += 1;
+            session.last_used = current_time;
+
+            // Write updated session back to storage
+            world.write_model(@session);
         }
 
         fn calculate_rounds(self: @ContractState, num_players: u32) -> u32 {
