@@ -9,6 +9,7 @@ pub mod GearActions {
     use dojo::model::ModelStorage;
     use crate::models::gear::{
         Gear, GearProperties, GearType, UpgradeCost, UpgradeSuccessRate, UpgradeMaterial,
+        GearLevelStats,
     };
     use crate::models::core::Operator;
     use crate::helpers::base::generate_id;
@@ -16,7 +17,7 @@ pub mod GearActions {
     // Import session model for validation
     use crate::models::session::SessionKey;
     use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
-    use core::felt252_div;
+    use origami_random::dice::{Dice, DiceTrait};
 
     const GEAR: felt252 = 'GEAR';
 
@@ -46,6 +47,7 @@ pub mod GearActions {
         pub player_id: ContractAddress,
         pub gear_id: u256,
         pub new_level: u64,
+        pub materials_consumed: Span<UpgradeMaterial> // Track what was consumed
     }
 
     // Event for failed upgrades
@@ -56,6 +58,7 @@ pub mod GearActions {
         pub player_id: ContractAddress,
         pub gear_id: u256,
         pub level: u64,
+        pub materials_consumed: Span<UpgradeMaterial> // Track what was consumed
     }
 
     #[abi(embed_v0)]
@@ -76,9 +79,16 @@ pub mod GearActions {
             assert(gear.upgrade_level < gear.max_upgrade_level, 'Gear at max level');
 
             let next_level = gear.upgrade_level + 1;
-            let upgrade_cost: UpgradeCost = world.read_model((gear.item_type, gear.upgrade_level));
+            let gear_type: GearType = gear.item_type.try_into().expect('Invalid gear type');
+
+            // Assert that the stats for the next level are defined before proceeding.
+            // This prevents players from losing materials on an impossible upgrade.
+            let new_stats: GearLevelStats = world.read_model((gear.asset_id, next_level));
+            assert(new_stats.asset_id != 0, 'Next level stats not defined');
+
+            let upgrade_cost: UpgradeCost = world.read_model((gear_type, gear.upgrade_level));
             let success_rate: UpgradeSuccessRate = world
-                .read_model((gear.item_type, gear.upgrade_level));
+                .read_model((gear_type, gear.upgrade_level));
 
             assert(upgrade_cost.materials.len() > 0, 'No upgrade path for item');
 
@@ -86,10 +96,7 @@ pub mod GearActions {
             let erc1155 = IERC1155Dispatcher { contract_address: materials_erc1155_address };
             let mut materials = upgrade_cost.materials;
             let mut i = 0;
-            loop {
-                if i >= materials.len() {
-                    break;
-                }
+            while i != materials.len() {
                 let material = *materials.at(i);
                 let balance = erc1155.balance_of(caller, material.token_id);
                 assert(balance >= material.amount, 'Insufficient materials');
@@ -106,24 +113,27 @@ pub mod GearActions {
                 i += 1;
             };
 
-            // Probability System using onchain pseudo-randomness
-            let timestamp_felt: felt252 = get_block_timestamp().into();
-            let item_id_low_felt: felt252 = item_id.low.into();
-            let pseudo_random: u8 = felt252_div(
-                timestamp_felt + item_id_low_felt + caller.into(), 100,
-            )
-                .try_into()
-                .unwrap();
+            // Probability System using pseudo-randomness
+            let mut dice = DiceTrait::new(255, 'SEED');
+            let pseudo_random: u8 = dice.roll();
 
             if pseudo_random < success_rate.rate.into() {
                 // Successful Upgrade
                 gear.upgrade_level = next_level;
+
+                // By incrementing the level, the gear now implicitly uses the `new_stats`
+                // we've already confirmed exist. No further action is needed to "apply" them
+                // in this ECS architecture.
+
                 world.write_model(@gear);
 
                 world
                     .emit_event(
                         @UpgradeSuccess {
-                            player_id: caller, gear_id: item_id, new_level: gear.upgrade_level,
+                            player_id: caller,
+                            gear_id: item_id,
+                            new_level: gear.upgrade_level,
+                            materials_consumed: materials.span(),
                         },
                     );
             } else {
@@ -131,7 +141,10 @@ pub mod GearActions {
                 world
                     .emit_event(
                         @UpgradeFailed {
-                            player_id: caller, gear_id: item_id, level: gear.upgrade_level,
+                            player_id: caller,
+                            gear_id: item_id,
+                            level: gear.upgrade_level,
+                            materials_consumed: materials.span(),
                         },
                     );
             }
@@ -454,8 +467,17 @@ pub mod GearActions {
 
                 // Base rates and costs - can be adjusted per gear_type if needed
                 let success_rates = array![
-                    95, 90, 85, 80, 75, 60, 50, 40, 30, 20,
-                ]; // Lvl 0->1 to 9->10
+                    95,
+                    90,
+                    85,
+                    80,
+                    75, // Levels 0->1 to 4->5 (higher rates)
+                    50,
+                    40,
+                    30,
+                    20,
+                    10 // Levels 5->6 to 9->10 (lower rates after breakpoint)
+                ]; // Implements breakpoint at level 5 as per requirements
                 let costs_scrap = array![10, 20, 40, 80, 120, 180, 250, 350, 500, 750];
                 let costs_wiring = array![0, 5, 10, 20, 40, 80, 120, 180, 250, 350];
                 let costs_alloy = array![0, 0, 0, 0, 10, 20, 40, 80, 120, 180];
@@ -502,11 +524,6 @@ pub mod GearActions {
                         materials_for_level
                             .append(
                                 UpgradeMaterial { token_id: cybernetic_core, amount: core_cost },
-                            );
-                    } else if alloy_cost > 0 { // Other gear types use alloy instead of core
-                        materials_for_level
-                            .append(
-                                UpgradeMaterial { token_id: advanced_alloy, amount: alloy_cost },
                             );
                     }
 

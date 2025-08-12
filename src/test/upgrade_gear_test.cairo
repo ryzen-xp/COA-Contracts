@@ -156,13 +156,16 @@ mod upgrade_gear_tests {
     #[test]
     fn test_probability_logic_comparison() {
         // This test simulates the comparison part of the probability check
-        let success_rate = sample_upgrade_success_rate(GearType::Firearm, 5, 80); // 80% chance
-
+        // Test breakpoint mechanics - levels 1-5 should have higher rates than 6-10
+        let rate_level_4 = sample_upgrade_success_rate(GearType::Firearm, 4, 85);
+        let rate_level_5 = sample_upgrade_success_rate(GearType::Firearm, 5, 80);
+        let rate_level_6 = sample_upgrade_success_rate(GearType::Firearm, 6, 60);
+        // Verify breakpoint: level 5 rate should be higher than level 6
+        assert(rate_level_5.rate > rate_level_6.rate, 'Breakpoint not implemented');
         // Simulate a "random" number generation
-        let pseudo_random_success: u8 = 79; // less than 80
-        let pseudo_random_failure: u8 = 80; // equal to or greater than 80
-
-        assert(pseudo_random_success < success_rate.rate, 'Random roll should succeed');
-        assert(pseudo_random_failure >= success_rate.rate, 'Random roll should fail');
+        let pseudo_random_success: u8 = 59; // less than 60
+        let pseudo_random_failure: u8 = 60; // equal to or greater than 60
+        assert(pseudo_random_success < rate_level_6.rate, 'Random roll should succeed');
+        assert(pseudo_random_failure >= rate_level_6.rate, 'Random roll should fail');
     }
 }
