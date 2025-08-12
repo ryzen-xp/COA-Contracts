@@ -7,6 +7,8 @@ use crate::types::player::{PlayerRank, PlayerRankTrait};
 use crate::types::base::{CREDITS};
 use dojo::world::{WorldStorage};
 use crate::helpers::body::BodyTrait;
+use crate::models::gear::GearType;
+use crate::helpers::gear::{parse_id};
 
 const DEFAULT_HP: u256 = 500;
 const DEFAULT_MAX_EQUIPPABLE_SLOT: u32 = 10;
@@ -27,7 +29,7 @@ pub struct Body {
     pub waist: Array<u256>, // Max 8 slots for now.
     pub feet: Array<u256>, // For Boots
     // Non-body-worn gear
-    pub off_body: Array<u256> // For drones/pets/AI companions — max 1 item
+    pub off_body: Array<u256>, // For drones/pets/AI companions — max 1 item
     pub vehicle: u256, // For vehicles
 }
 
@@ -301,6 +303,7 @@ pub mod Errors {
     pub const OUT_ITEM_NOT_OWNED: felt252 = 'OUT ITEM NOT OWNED';
     pub const IN_ITEM_ALREADY_EQUIPPED: felt252 = 'IN ITEM ALREADY EQUIPPED';
     pub const VEHICLE_NOT_EQUIPPED: felt252 = 'VEHICLE NOT EQUIPPED';
+    pub const ITEM_TOKEN_NOT_OWNED: felt252 = 'PLAYER NOT OWNER OF ITEM TOKEN';
 }
 
 // Helper function to get the high 128 bits from a u256
