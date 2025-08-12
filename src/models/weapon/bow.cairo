@@ -20,11 +20,18 @@ pub impl BowImpl of BowTrait {
     }
 
     fn get_effective_range_damage(self: @Bow, distance: u64) -> u64 {
-        if distance > *self.range {
-            0
-        } else {
-            // Linear damage falloff
-            *self.damage - (*self.damage * distance / *self.range) / 2
+        let range = *self.range;
+        if range == 0 {
+            return 0;
         }
+        if distance > range {
+            return 0;
+        }
+        // Linear damage falloff with u128 intermediates:
+        // damage - ((damage * distance / range) / 2)
+        let dmg128: u128 = (*self.damage).into();
+        let scaled = (dmg128 * distance.into()) / range.into();
+        let falloff = scaled / 2_u128;
+        (dmg128 - falloff).try_into().unwrap()
     }
 }

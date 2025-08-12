@@ -73,6 +73,10 @@ pub impl ExplosivesImpl of ExplosivesTrait {
         }
 
         let current_time = get_block_timestamp();
-        current_time >= *self.armed_timestamp + *self.detonation_time
+        // Guard against underflow and avoid overflow by comparing via subtraction
+        if current_time < *self.armed_timestamp {
+            return false;
+        }
+        current_time - *self.armed_timestamp >= *self.detonation_time
     }
 }

@@ -29,7 +29,14 @@ pub impl BluntWeaponImpl of BluntWeaponTrait {
     }
 
     fn calculate_dps(self: @BluntWeapon) -> u64 {
-        (*self.damage * *self.speed) / 100
+        // Using u128 intermediates to avoid overflow.
+        let product: u128 = (*self.damage).into() * (*self.speed).into();
+        let dps128: u128 = product / 100_u128;
+        // Saturate to u64::MAX if downcast overflows.
+        match dps128.try_into() {
+            Option::Some(v) => v,
+            Option::None => 18446744073709551615_u64 // u64::MAX
+        }
     }
 
     fn apply_wear(ref self: BluntWeapon, amount: u64) {
@@ -41,10 +48,17 @@ pub impl BluntWeaponImpl of BluntWeaponTrait {
     }
 
     fn repair(ref self: BluntWeapon, amount: u64) {
-        self.durability += amount;
-        if self.durability > self.max_durability {
-            self.durability = self.max_durability;
-        }
+        let room = if self.max_durability > self.durability {
+            self.max_durability - self.durability
+        } else {
+            0
+        };
+        let inc = if amount > room {
+            room
+        } else {
+            amount
+        };
+        self.durability += inc;
     }
 
     fn is_broken(self: @BluntWeapon) -> bool {

@@ -47,9 +47,16 @@ pub impl DroneImpl of DroneTrait {
     }
 
     fn recharge(ref self: Drone, amount: u64) {
-        self.battery_life += amount;
-        if self.battery_life > self.max_battery_life {
+        // Avoid overflow: compare against remaining capacity first
+        let remaining = if self.max_battery_life >= self.battery_life {
+            self.max_battery_life - self.battery_life
+        } else {
+            0
+        };
+        if amount >= remaining {
             self.battery_life = self.max_battery_life;
+        } else {
+            self.battery_life += amount;
         }
     }
 

@@ -1,6 +1,6 @@
 #[dojo::model]
 #[derive(Drop, Copy, Serde)]
-pub struct HeavyFirearms {
+pub struct HeavyFirearm {
     #[key]
     pub asset_id: u256,
     pub damage: u64,
@@ -11,9 +11,9 @@ pub struct HeavyFirearms {
 }
 
 #[generate_trait]
-pub impl HeavyFirearmsImpl of HeavyFirearmsTrait {
+pub impl HeavyFirearmImpl of HeavyFirearmTrait {
     fn init(
-        ref self: HeavyFirearms,
+        ref self: HeavyFirearm,
         asset_id: u256,
         damage: u64,
         area_of_effect: u64,
@@ -29,7 +29,7 @@ pub impl HeavyFirearmsImpl of HeavyFirearmsTrait {
         self.mobility_penalty = mobility_penalty;
     }
 
-    fn get_mobility_penalty(self: @HeavyFirearms) -> u8 {
+    fn get_mobility_penalty(self: @HeavyFirearm) -> u8 {
         *self.mobility_penalty
     }
 }

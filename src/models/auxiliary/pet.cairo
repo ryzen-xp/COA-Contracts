@@ -28,9 +28,11 @@ pub impl PetImpl of PetTrait {
     }
 
     fn heal(ref self: Pet, amount: u64) {
-        self.health += amount;
-        if self.health > self.max_health {
+        // Avoid overflow by checking the headroom first.
+        if amount > self.max_health - self.health {
             self.health = self.max_health;
+        } else {
+            self.health += amount;
         }
     }
 

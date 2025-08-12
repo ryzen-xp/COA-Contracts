@@ -33,6 +33,11 @@ pub impl FirearmImpl of FirearmTrait {
     }
 
     fn calculate_dps(self: @Firearm) -> u64 {
-        (*self.damage * *self.fire_rate) / 60
+        // Using u128 intermediate to avoid overflow on multiplication.
+        let dmg128: u128 = (*self.damage).into();
+        let rate128: u128 = (*self.fire_rate).into();
+        let dps128 = (dmg128 * rate128) / 60_u128;
+        // Safe to cast back given domain constraints;
+        dps128.try_into().unwrap()
     }
 }

@@ -20,13 +20,8 @@ pub impl LegArmorImpl of LegArmorTrait {
     }
 
     fn apply_damage(ref self: LegArmor, damage: u64) -> u64 {
-        let reduction = self.defense;
-        let absorbed = if damage > reduction {
-            reduction
-        } else {
-            damage
-        };
-        if self.durability > 0 {
+        let absorbed = core::cmp::min(damage, self.defense);
+        if absorbed > 0 && self.durability > 0 {
             self.durability -= 1;
         }
         damage - absorbed
