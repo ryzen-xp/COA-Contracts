@@ -84,8 +84,8 @@ pub mod GearActions {
             // Assert that the stats for the next level are defined before proceeding.
             // This prevents players from losing materials on an impossible upgrade.
             let new_stats: GearLevelStats = world.read_model((gear.asset_id, next_level));
-            assert(new_stats.asset_id != 0, 'Next level stats not defined');
-
+            // Ensure the exact next-level record exists
+            assert(new_stats.level == next_level, 'Next level stats not defined');
             let upgrade_cost: UpgradeCost = world.read_model((gear_type, gear.upgrade_level));
             let success_rate: UpgradeSuccessRate = world
                 .read_model((gear_type, gear.upgrade_level));
