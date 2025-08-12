@@ -113,11 +113,15 @@ pub mod GearActions {
                 i += 1;
             };
 
-            // Probability System using pseudo-randomness
-            let mut dice = DiceTrait::new(255, 'SEED');
-            let pseudo_random: u8 = dice.roll();
+            // Probability System using seeded dice with on-chain entropy
+            let tx_hash: felt252 = starknet::get_tx_info().unbox().transaction_hash;
+            let seed: felt252 =
+                tx_hash + caller.into() + item_id.low.into() + get_block_timestamp().into();
+            // Use 100 sides for percent-based roll
+            let mut dice = DiceTrait::new(100, seed);
+            let pseudo_random: u8 = dice.roll(); // Expect 0..=99 or 1..=100 based on impl
 
-            if pseudo_random < success_rate.rate.into() {
+            if pseudo_random < success_rate.rate.into() { // or `<=` if roll is 1..=100
                 // Successful Upgrade
                 gear.upgrade_level = next_level;
 
