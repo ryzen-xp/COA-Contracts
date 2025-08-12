@@ -111,6 +111,16 @@ pub struct UpgradeSuccessRate {
     pub rate: u8,
 }
 
+// Model to track the state of the upgrade data initialization process.
+#[dojo::model]
+#[derive(Drop, Copy, Serde, Default)]
+pub struct UpgradeConfigState {
+    #[key]
+    pub singleton_key: u8, // Always 0, to ensure only one instance exists.
+    pub initialized_types_count: u32,
+    pub is_complete: bool,
+}
+
 // for now, all items would implement this trait
 // move this trait and it's impl to `helpers/gear.cairo`
 

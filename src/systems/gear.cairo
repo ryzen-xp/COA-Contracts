@@ -9,7 +9,7 @@ pub mod GearActions {
     use dojo::model::ModelStorage;
     use crate::models::gear::{
         Gear, GearProperties, GearType, UpgradeCost, UpgradeSuccessRate, UpgradeMaterial,
-        GearLevelStats,
+        GearLevelStats, UpgradeConfigState,
     };
     use crate::models::core::Operator;
     use crate::helpers::base::generate_id;
@@ -20,12 +20,21 @@ pub mod GearActions {
     use origami_random::dice::{Dice, DiceTrait};
 
     const GEAR: felt252 = 'GEAR';
+    // A constant key for our singleton UpgradeConfigState model
+    const UPGRADE_CONFIG_KEY: u8 = 0;
 
     fn dojo_init(ref self: ContractState) {
         let mut world = self.world_default();
         self._assert_admin();
         self._initialize_gear_assets(ref world);
-        self._initialize_upgrade_data(ref world);
+        world
+            .write_model(
+                @UpgradeConfigState {
+                    singleton_key: UPGRADE_CONFIG_KEY,
+                    initialized_types_count: 0,
+                    is_complete: false,
+                },
+            );
     }
 
     #[derive(Drop, Copy, Serde)]
@@ -115,13 +124,14 @@ pub mod GearActions {
 
             // Probability System using seeded dice with on-chain entropy
             let tx_hash: felt252 = starknet::get_tx_info().unbox().transaction_hash;
-            let seed: felt252 =
-                tx_hash + caller.into() + item_id.low.into() + get_block_timestamp().into();
-            // Use 100 sides for percent-based roll
+            let seed: felt252 = tx_hash
+                + caller.into()
+                + item_id.low.into()
+                + get_block_timestamp().into();
             let mut dice = DiceTrait::new(100, seed);
-            let pseudo_random: u8 = dice.roll(); // Expect 0..=99 or 1..=100 based on impl
+            let pseudo_random: u8 = dice.roll();
 
-            if pseudo_random < success_rate.rate.into() { // or `<=` if roll is 1..=100
+            if pseudo_random < success_rate.rate.into() {
                 // Successful Upgrade
                 gear.upgrade_level = next_level;
 
@@ -361,6 +371,64 @@ pub mod GearActions {
 
             successfully_picked
         }
+
+        // AUTOMATED BATCH INITIALIZATION FUNCTION
+        // The admin calls this function repeatedly without arguments.
+        // Each call processes a batch of GearTypes until all are initialized.
+        fn initialize_upgrade_data(ref self: ContractState) {
+            self._assert_admin();
+            let mut world = self.world_default();
+
+            let mut config_state: UpgradeConfigState = world.read_model(UPGRADE_CONFIG_KEY);
+            assert(!config_state.is_complete, 'Initialization is complete');
+
+            // Define the full list of gear types to be initialized
+            let gear_types = array![
+                GearType::Weapon,
+                GearType::BluntWeapon,
+                GearType::Sword,
+                GearType::Bow,
+                GearType::Firearm,
+                GearType::Polearm,
+                GearType::HeavyFirearms,
+                GearType::Explosives,
+                GearType::Helmet,
+                GearType::ChestArmor,
+                GearType::LegArmor,
+                GearType::Boots,
+                GearType::Gloves,
+                GearType::Shield,
+                GearType::Vehicle,
+                GearType::Pet,
+                GearType::Drone,
+            ];
+
+            let total_types = gear_types.len();
+            let start_index = config_state.initialized_types_count;
+
+            // Define a safe batch size to stay within gas limits.
+            // Processing 3 types results in ~60 writes, which is very safe.
+            const BATCH_SIZE: u32 = 3;
+            let mut end_index = start_index + BATCH_SIZE;
+            if end_index > total_types {
+                end_index = total_types;
+            }
+
+            // Process the batch
+            let mut i = start_index;
+            while i < end_index {
+                self._initialize_upgrade_data_for_gear_type(ref world, *gear_types.at(i));
+                i += 1;
+            };
+
+            // Update the config state
+            config_state.initialized_types_count = end_index;
+            if config_state.initialized_types_count == total_types {
+                config_state.is_complete = true;
+            }
+
+            world.write_model(@config_state);
+        }
     }
 
     #[generate_trait]
@@ -436,113 +504,65 @@ pub mod GearActions {
         }
 
         // Full implementation of upgrade data initialization
-        fn _initialize_upgrade_data(ref self: ContractState, ref world: WorldStorage) {
+        fn _initialize_upgrade_data_for_gear_type(
+            self: @ContractState, ref world: WorldStorage, gear_type: GearType,
+        ) {
+            // ... (The logic from the previous answer is perfect and stays here)
             // Material Fungible Token IDs (placeholders)
             let scrap_metal: u256 = 1;
             let wiring: u256 = 2;
             let advanced_alloy: u256 = 3;
             let cybernetic_core: u256 = 4;
 
-            // This exhaustive list defines the upgrade path for all gear from level 0 to 9.
-            // Level 10 is the max, so there is no cost/rate defined for it.
-            let gear_types = array![
-                GearType::Weapon,
-                GearType::BluntWeapon,
-                GearType::Sword,
-                GearType::Bow,
-                GearType::Firearm,
-                GearType::Polearm,
-                GearType::HeavyFirearms,
-                GearType::Explosives,
-                GearType::Helmet,
-                GearType::ChestArmor,
-                GearType::LegArmor,
-                GearType::Boots,
-                GearType::Gloves,
-                GearType::Shield,
-                GearType::Vehicle,
-                GearType::Pet,
-                GearType::Drone,
-            ];
+            // Base rates and costs
+            let success_rates = array![95, 90, 85, 80, 75, 50, 40, 30, 20, 10];
+            let costs_scrap = array![10, 20, 40, 80, 120, 180, 250, 350, 500, 750];
+            let costs_wiring = array![0, 5, 10, 20, 40, 80, 120, 180, 250, 350];
+            let costs_alloy = array![0, 0, 0, 0, 10, 20, 40, 80, 120, 180];
+            let costs_core = array![0, 0, 0, 0, 0, 0, 5, 10, 20, 40];
 
-            let mut i = 0;
-            while i != gear_types.len() {
-                let gear_type = *gear_types.at(i);
+            let mut level: u32 = 0;
+            while level != 10 {
+                world
+                    .write_model(
+                        @UpgradeSuccessRate {
+                            gear_type: gear_type,
+                            level: level.into(),
+                            rate: *success_rates.at(level),
+                        },
+                    );
 
-                // Base rates and costs - can be adjusted per gear_type if needed
-                let success_rates = array![
-                    95,
-                    90,
-                    85,
-                    80,
-                    75, // Levels 0->1 to 4->5 (higher rates)
-                    50,
-                    40,
-                    30,
-                    20,
-                    10 // Levels 5->6 to 9->10 (lower rates after breakpoint)
-                ]; // Implements breakpoint at level 5 as per requirements
-                let costs_scrap = array![10, 20, 40, 80, 120, 180, 250, 350, 500, 750];
-                let costs_wiring = array![0, 5, 10, 20, 40, 80, 120, 180, 250, 350];
-                let costs_alloy = array![0, 0, 0, 0, 10, 20, 40, 80, 120, 180];
-                let costs_core = array![0, 0, 0, 0, 0, 0, 5, 10, 20, 40];
+                let mut materials_for_level = array![];
+                let scrap_cost = *costs_scrap.at(level);
+                if scrap_cost > 0 {
+                    materials_for_level
+                        .append(UpgradeMaterial { token_id: scrap_metal, amount: scrap_cost });
+                }
+                let wiring_cost = *costs_wiring.at(level);
+                if wiring_cost > 0 {
+                    materials_for_level
+                        .append(UpgradeMaterial { token_id: wiring, amount: wiring_cost });
+                }
+                let alloy_cost = *costs_alloy.at(level);
+                if alloy_cost > 0 {
+                    materials_for_level
+                        .append(UpgradeMaterial { token_id: advanced_alloy, amount: alloy_cost });
+                }
+                let core_cost = *costs_core.at(level);
+                if (gear_type == GearType::Pet || gear_type == GearType::Drone) && core_cost > 0 {
+                    materials_for_level
+                        .append(UpgradeMaterial { token_id: cybernetic_core, amount: core_cost });
+                }
 
-                let mut level: u32 = 0;
-                while level != 10 {
-                    // Set Success Rate for current level
-                    world
-                        .write_model(
-                            @UpgradeSuccessRate {
-                                gear_type: gear_type,
-                                level: level.into(),
-                                rate: *success_rates.at(level),
-                            },
-                        );
-
-                    // Set Material Costs for current level
-                    let mut materials_for_level = array![];
-
-                    // Add materials based on cost schedule
-                    let scrap_cost = *costs_scrap.at(level);
-                    if scrap_cost > 0 {
-                        materials_for_level
-                            .append(UpgradeMaterial { token_id: scrap_metal, amount: scrap_cost });
-                    }
-                    let wiring_cost = *costs_wiring.at(level);
-                    if wiring_cost > 0 {
-                        materials_for_level
-                            .append(UpgradeMaterial { token_id: wiring, amount: wiring_cost });
-                    }
-                    let alloy_cost = *costs_alloy.at(level);
-                    if alloy_cost > 0 {
-                        materials_for_level
-                            .append(
-                                UpgradeMaterial { token_id: advanced_alloy, amount: alloy_cost },
-                            );
-                    }
-
-                    // Special case for Pet/Drone requiring Cybernetic Cores at high levels
-                    let core_cost = *costs_core.at(level);
-                    if (gear_type == GearType::Pet || gear_type == GearType::Drone)
-                        && core_cost > 0 {
-                        materials_for_level
-                            .append(
-                                UpgradeMaterial { token_id: cybernetic_core, amount: core_cost },
-                            );
-                    }
-
-                    world
-                        .write_model(
-                            @UpgradeCost {
-                                gear_type: gear_type,
-                                level: level.into(),
-                                materials: materials_for_level,
-                            },
-                        );
-
-                    level += 1;
-                };
-                i += 1;
+                world
+                    .write_model(
+                        @UpgradeCost {
+                            gear_type: gear_type,
+                            level: level.into(),
+                            materials: materials_for_level,
+                        },
+                    );
+                level += 1;
             };
         }
 

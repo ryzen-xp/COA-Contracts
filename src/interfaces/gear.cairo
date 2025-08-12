@@ -3,6 +3,7 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IGear<TContractState> {
+    fn initialize_upgrade_data(ref self: TContractState);
     fn upgrade_gear(
         ref self: TContractState,
         item_id: u256,

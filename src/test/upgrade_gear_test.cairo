@@ -1,8 +1,5 @@
-use core::num::traits::Zero;
-use coa::models::gear::{
-    Gear, GearType, UpgradeCost, UpgradeSuccessRate, UpgradeMaterial, GearTrait,
-};
-use coa::models::player::{Player, PlayerTrait};
+use coa::models::gear::{Gear, GearType, UpgradeCost, UpgradeSuccessRate, UpgradeMaterial};
+use coa::models::player::{Player};
 use starknet::ContractAddress;
 
 // Test constants
