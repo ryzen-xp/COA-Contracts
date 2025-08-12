@@ -304,6 +304,7 @@ pub mod Errors {
     pub const IN_ITEM_ALREADY_EQUIPPED: felt252 = 'IN ITEM ALREADY EQUIPPED';
     pub const VEHICLE_NOT_EQUIPPED: felt252 = 'VEHICLE NOT EQUIPPED';
     pub const ITEM_TOKEN_NOT_OWNED: felt252 = 'PLAYER NOT OWNER OF ITEM TOKEN';
+    pub const IN_ITEM_SAME_AS_OUT_ITEM: felt252 = 'IN ITEM SAME AS OUT ITEM';
 }
 
 // Helper function to get the high 128 bits from a u256

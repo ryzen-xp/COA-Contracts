@@ -52,9 +52,9 @@ pub mod GearActions {
     #[abi(embed_v0)]
     impl GearActionsImpl of GearActionsTrait<ContractState> {
         fn exchange(ref self: ContractState, in_item_id: u256, out_item_id: u256) {
-            // assert(in_item_id != out_item_id, Errors::IN_ITEM_SAME_AS_OUT_ITEM);
-            assert(in_item_id.is_non_zero(), Errors::INVALID_ITEM_ID);
-            assert(out_item_id.is_non_zero(), Errors::INVALID_ITEM_ID);
+            assert(in_item_id != out_item_id, Errors::IN_ITEM_SAME_AS_OUT_ITEM);
+            assert(!in_item_id.is_zero(), Errors::INVALID_ITEM_ID);
+            assert(!out_item_id.is_zero(), Errors::INVALID_ITEM_ID);
 
             // Get the game world
             let mut world = self.world(@"coa_world");
@@ -78,10 +78,10 @@ pub mod GearActions {
             assert(out_gear.owner == player_id, Errors::OUT_ITEM_NOT_OWNED);
 
             // Verify out_item_id is equipped
-            assert(body.clone().get_equipped_item(get_high(out_asset_id)) != 0, Errors::OUT_ITEM_NOT_EQUIPPED);
+            assert(body.clone().get_equipped_item(get_high(out_asset_id)) != 0_u256, Errors::OUT_ITEM_NOT_EQUIPPED);
 
             // Simple placeholder vehicle logic check for the moment 
-            let vehicle_equipped = player.clone().is_equipped(get_high(VEHICLE_ID)) != 0; // | body.vehicle != 0_u256;
+            let vehicle_equipped = player.clone().is_equipped(get_high(VEHICLE_ID)) != 0_u256; // | body.vehicle != 0_u256;
             let is_vehicle_scenario = !in_gear.spawned && vehicle_equipped;
             let erc1155 = IERC1155Dispatcher { contract_address: erc1155_address };
 
@@ -90,7 +90,7 @@ pub mod GearActions {
 
                 // Verify `in_item` token ownership
                 let balance = erc1155.balance_of(player_id, in_asset_id);
-                assert(balance > 0, Errors::ITEM_TOKEN_NOT_OWNED);
+                assert(balance > 0_u256, Errors::ITEM_TOKEN_NOT_OWNED);
 
                 // Verify in_item_id not equipped
                 assert(body.clone().get_equipped_item(get_high(in_asset_id)) == 0, Errors::IN_ITEM_ALREADY_EQUIPPED);
