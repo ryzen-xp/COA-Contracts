@@ -3,7 +3,10 @@ use crate::models::position::{Position, PositionHistory, MovementType};
 #[starknet::interface]
 pub trait IPosition<TContractState> {
     fn move_player(
-        ref self: TContractState, player_id: felt252, new_x: u32, new_y: u32, new_z: u32,
+        ref self: TContractState,
+        player_id: felt252,
+        movement_type: MovementType,
+        new_x: u32, new_y: u32, new_z: u32,
     );
 
     fn get_player_position(self: @TContractState, player_id: felt252) -> Position;
@@ -59,7 +62,10 @@ pub mod PositionActions {
     #[abi(embed_v0)]
     impl PositionActionsImpl of IPosition<ContractState> {
         fn move_player(
-            ref self: ContractState, player_id: felt252, new_x: u32, new_y: u32, new_z: u32,
+            ref self: ContractState, 
+            player_id: felt252, 
+            movement_type: MovementType, 
+            new_x: u32, new_y: u32, new_z: u32,
         ) {
             let mut world = self.world_default();
 
