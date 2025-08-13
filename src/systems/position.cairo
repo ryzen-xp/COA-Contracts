@@ -16,7 +16,7 @@ pub trait IPosition<TContractState> {
     ) -> Array<Position>;
 
     fn validate_movement(
-        self: @TContractState, player_id: felt252, from: Position, to: Position,
+        self: @TContractState, player_id: felt252, from: Position, to: Position, movement_type: MovementType,
     ) -> bool;
 
     fn check_collision(self: @TContractState, x: u32, y: u32, z: u32) -> bool;
@@ -129,7 +129,7 @@ pub mod PositionActions {
         }
 
         fn validate_movement(
-            self: @ContractState, player_id: felt252, from: Position, to: Position,
+            self: @ContractState, player_id: felt252, from: Position, to: Position, movement_type: MovementType,
         ) -> bool {
             if !(to.x >= WORLD_MIN_X && to.x <= WORLD_MAX_X) {
                 return false;
