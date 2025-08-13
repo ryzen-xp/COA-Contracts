@@ -6,7 +6,9 @@ pub trait IPosition<TContractState> {
         ref self: TContractState,
         player_id: felt252,
         movement_type: MovementType,
-        new_x: u32, new_y: u32, new_z: u32,
+        new_x: u32,
+        new_y: u32,
+        new_z: u32,
     );
 
     fn get_player_position(self: @TContractState, player_id: felt252) -> Position;
@@ -16,7 +18,11 @@ pub trait IPosition<TContractState> {
     ) -> Array<Position>;
 
     fn validate_movement(
-        self: @TContractState, player_id: felt252, from: Position, to: Position, movement_type: MovementType,
+        self: @TContractState,
+        player_id: felt252,
+        from: Position,
+        to: Position,
+        movement_type: MovementType,
     ) -> bool;
 
     fn check_collision(self: @TContractState, x: u32, y: u32, z: u32) -> bool;
@@ -63,10 +69,12 @@ pub mod PositionActions {
     #[abi(embed_v0)]
     impl PositionActionsImpl of IPosition<ContractState> {
         fn move_player(
-            ref self: ContractState, 
-            player_id: felt252, 
-            movement_type: MovementType, 
-            new_x: u32, new_y: u32, new_z: u32,
+            ref self: ContractState,
+            player_id: felt252,
+            movement_type: MovementType,
+            new_x: u32,
+            new_y: u32,
+            new_z: u32,
         ) {
             let mut world = self.world_default();
 
@@ -122,7 +130,11 @@ pub mod PositionActions {
         }
 
         fn validate_movement(
-            self: @ContractState, player_id: felt252, from: Position, to: Position, movement_type: MovementType,
+            self: @ContractState,
+            player_id: felt252,
+            from: Position,
+            to: Position,
+            movement_type: MovementType,
         ) -> bool {
             if !(to.x >= WORLD_MIN_X && to.x <= WORLD_MAX_X) {
                 return false;
@@ -183,16 +195,17 @@ pub mod PositionActions {
             timestamp: u64,
             movement_type: MovementType,
         ) {
+            let mut world = self.world_default();
             // Use timestamp as the base and increment to avoid collisions within the same second.
-+            let ts: u64 = timestamp;
-+            let mut seq: u64 = ts;
-+            loop {
-+                let existing: PositionHistory = world.read_model((player_id, seq));
-+                if existing.timestamp == 0_u64 {
-+                    break;
-+                }
-+                seq += 1_u64;
-+            }
+            let ts: u64 = timestamp;
+            let mut seq: u64 = ts;
+            loop {
+                let existing: PositionHistory = world.read_model((player_id, seq));
+                if existing.timestamp == 0_u64 {
+                    break;
+                }
+                seq += 1_u64;
+            }
             let history = PositionHistory {
                 player_id,
                 sequence: seq,
@@ -219,7 +232,7 @@ pub mod PositionActions {
                     break;
                 }
                 // Bound search window to 1h worth of seconds to limit gas
-                if (now - seq) > 3600_u64 {
+                if seq <= now && (now - seq) > 3600_u64 {
                     break;
                 }
                 let entry: PositionHistory = world.read_model((player_id, seq));
@@ -230,7 +243,7 @@ pub mod PositionActions {
                 if seq == 0 {
                     break;
                 }
-                seq -= 1;
+                seq -= 1_u64;
             };
             result
         }
@@ -255,7 +268,7 @@ pub mod PositionActions {
                 if seq == 0 {
                     break;
                 }
-                seq -= 1;
+                seq -= 1_u64;
             };
         }
     }
