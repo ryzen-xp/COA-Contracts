@@ -181,6 +181,7 @@ pub mod PositionActions {
             let history = PositionHistory {
                 player_id,
                 sequence: seq,
+                subsequence: 0,
                 x: position.x,
                 y: position.y,
                 z: position.z,
