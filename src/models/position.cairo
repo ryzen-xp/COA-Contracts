@@ -15,7 +15,7 @@ pub struct PositionHistory {
     #[key]
     pub player_id: felt252,
     #[key]
-    pub sequence: u32,
+    pub sequence: u64,
     pub x: u32,
     pub y: u32,
     pub z: u32,
