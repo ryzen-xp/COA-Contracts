@@ -25,7 +25,7 @@ pub struct PositionHistory {
     pub movement_type: MovementType,
 }
 
-#[derive(Copy, Drop, Serde, PartialEq)]
+#[derive(Copy, Drop, Serde, PartialEq, Introspect)]
 pub enum MovementType {
     Walk,
     Run,

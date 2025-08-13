@@ -205,7 +205,7 @@ pub mod PositionActions {
                     break;
                 }
                 seq += 1_u64;
-            }
+            };
             let history = PositionHistory {
                 player_id,
                 sequence: seq,
