@@ -133,9 +133,18 @@ pub mod PositionActions {
             if !(to.z >= WORLD_MIN_Z && to.z <= WORLD_MAX_Z) {
                 return false;
             }
-            let distance: u32 = self.calculate_movement_distance(from, to);
-            if distance > MAX_MOVEMENT_DISTANCE {
-                return false;
+            // Allow first spawn anywhere.
+            if from.last_updated != 0 {
+                // Allow special movement types to bypass distance limits.
+                match movement_type {
+                    MovementType::Teleport | MovementType::Respawn | MovementType::Forced => {},
+                    _ => {
+                        let distance: u32 = self.calculate_movement_distance(from, to);
+                        if distance > MAX_MOVEMENT_DISTANCE {
+                            return false;
+                        }
+                    },
+                }
             }
             if self.check_collision(to.x, to.y, to.z) {
                 return false;
@@ -174,9 +183,16 @@ pub mod PositionActions {
             timestamp: u64,
             movement_type: MovementType,
         ) {
-            let mut world = self.world_default();
-            // Use timestamp as a monotonic sequence surrogate
-            let seq: u64 = timestamp;
+            // Use timestamp as the base and increment to avoid collisions within the same second.
++            let ts: u64 = timestamp;
++            let mut seq: u64 = ts;
++            loop {
++                let existing: PositionHistory = world.read_model((player_id, seq));
++                if existing.timestamp == 0_u64 {
++                    break;
++                }
++                seq += 1_u64;
++            }
             let history = PositionHistory {
                 player_id,
                 sequence: seq,
