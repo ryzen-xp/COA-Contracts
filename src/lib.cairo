@@ -6,6 +6,7 @@ pub mod systems {
     pub mod pet;
     pub mod tournament;
     pub mod session;
+    pub mod position;
 }
 
 pub mod erc1155 {
@@ -17,6 +18,7 @@ pub mod models {
     pub mod core;
     pub mod gear;
     pub mod armour;
+    pub mod position;
     pub mod marketplace;
     pub mod weapon_stats;
     pub mod armor_stats;
