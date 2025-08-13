@@ -77,21 +77,13 @@ pub mod PositionActions {
             let from_y = current.y;
             let from_z = current.z;
 
-            // Bounds checks
-            assert(new_x >= WORLD_MIN_X && new_x <= WORLD_MAX_X, 'INVALID_COORDINATES');
-            assert(new_y >= WORLD_MIN_Y && new_y <= WORLD_MAX_Y, 'INVALID_COORDINATES');
-            assert(new_z >= WORLD_MIN_Z && new_z <= WORLD_MAX_Z, 'INVALID_COORDINATES');
-
-            // Distance check (Manhattan)
             let from = current;
             let to = Position {
                 player_id, x: new_x, y: new_y, z: new_z, last_updated: from.last_updated,
             };
-            let distance = self.calculate_movement_distance(from, to);
-            assert(distance <= MAX_MOVEMENT_DISTANCE, 'MOVEMENT_TOO_LARGE');
 
-            // Collision check (placeholder)
-            assert(!self.check_collision(new_x, new_y, new_z), 'COLLISION_DETECTED');
+            // Centralized validation (see validate_movement)
+            assert(self.validate_movement(player_id, from, to, movement_type), 'INVALID_MOVE');
 
             // Write new position
             let ts = get_block_timestamp();
