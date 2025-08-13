@@ -27,6 +27,7 @@ pub trait IPosition<TContractState> {
         ref self: TContractState,
         player_id: felt252,
         position: Position,
+        timestamp: u64,
         movement_type: MovementType,
     );
 
@@ -98,7 +99,7 @@ pub mod PositionActions {
             world.write_model(@updated);
 
             // Record history and emit event
-            self.add_position_history(player_id, updated, MovementType::Walk);
+            self.add_position_history(player_id, updated, ts, movement_type);
             let moved = PlayerMoved {
                 player_id,
                 from_x,
@@ -107,7 +108,7 @@ pub mod PositionActions {
                 to_x: new_x,
                 to_y: new_y,
                 to_z: new_z,
-                movement_type: MovementType::Walk,
+                movement_type,
                 timestamp: ts,
             };
             world.emit_event(@moved);
@@ -178,12 +179,12 @@ pub mod PositionActions {
             ref self: ContractState,
             player_id: felt252,
             position: Position,
+            timestamp: u64,
             movement_type: MovementType,
         ) {
             let mut world = self.world_default();
-            let ts = get_block_timestamp();
             // Use timestamp as a monotonic sequence surrogate
-            let seq: u64 = ts;
+            let seq: u64 = timestamp;
             let history = PositionHistory {
                 player_id,
                 sequence: seq,
@@ -191,7 +192,7 @@ pub mod PositionActions {
                 x: position.x,
                 y: position.y,
                 z: position.z,
-                timestamp: ts,
+                timestamp,
                 movement_type,
             };
             world.write_model(@history);
