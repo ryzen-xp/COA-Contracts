@@ -42,6 +42,7 @@ pub mod PositionActions {
     use dojo::model::ModelStorage;
     use dojo::event::EventStorage;
     use core::array::ArrayTrait;
+    use core::traits::TryInto;
 
     // Movement constraints
     const MAX_MOVEMENT_DISTANCE: u32 = 100;
@@ -118,7 +119,8 @@ pub mod PositionActions {
             self: @ContractState, center_x: u32, center_y: u32, center_z: u32, radius: u32,
         ) -> Array<Position> {
             // Placeholder: requires indexing
-            array![]
+            let result: Array<Position> = array![];
+            result
         }
 
         fn validate_movement(
@@ -133,7 +135,7 @@ pub mod PositionActions {
             if !(to.z >= WORLD_MIN_Z && to.z <= WORLD_MAX_Z) {
                 return false;
             }
-            let distance = self.calculate_movement_distance(from, to);
+            let distance: u32 = self.calculate_movement_distance(from, to);
             if distance > MAX_MOVEMENT_DISTANCE {
                 return false;
             }
@@ -176,7 +178,7 @@ pub mod PositionActions {
             let mut world = self.world_default();
             let ts = get_block_timestamp();
             // Use timestamp (truncated) as a monotonic sequence surrogate
-            let seq: u32 = ts.into();
+            let seq: u32 = ts.try_into().unwrap_or(0);
             let history = PositionHistory {
                 player_id,
                 sequence: seq,
@@ -194,7 +196,7 @@ pub mod PositionActions {
         ) -> Array<PositionHistory> {
             let world = self.world_default();
             let now = get_block_timestamp();
-            let mut seq: u32 = now.into();
+            let mut seq: u32 = now.try_into().unwrap_or(0);
             let mut collected: u32 = 0;
             let mut result: Array<PositionHistory> = array![];
             loop {
@@ -202,7 +204,8 @@ pub mod PositionActions {
                     break;
                 }
                 // Bound search window to 1h worth of seconds to limit gas
-                if (now - seq.into()) > 3600_u64 {
+                let seq64: u64 = seq.try_into().unwrap_or(0);
+                if (now - seq64) > 3600_u64 {
                     break;
                 }
                 let entry: PositionHistory = world.read_model((player_id, seq));
@@ -221,7 +224,7 @@ pub mod PositionActions {
         fn cleanup_old_history(ref self: ContractState, player_id: felt252, keep_last: u32) {
             let mut world = self.world_default();
             let now = get_block_timestamp();
-            let mut seq: u32 = now.into();
+            let mut seq: u32 = now.try_into().unwrap_or(0);
             let mut kept: u32 = 0;
             let mut scanned: u32 = 0;
             loop {
@@ -232,9 +235,6 @@ pub mod PositionActions {
                 if entry.timestamp != 0 {
                     if kept < keep_last {
                         kept += 1;
-                    } else {
-                        // Best-effort deletion; depends on Dojo ModelStorage delete support
-                        world.delete_model((player_id, seq));
                     }
                 }
                 scanned += 1;

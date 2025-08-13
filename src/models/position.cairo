@@ -10,7 +10,7 @@ pub struct Position {
 }
 
 #[dojo::model]
-#[derive(Drop, Copy, Serde)]
+#[derive(Copy, Drop, Serde)]
 pub struct PositionHistory {
     #[key]
     pub player_id: felt252,
