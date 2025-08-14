@@ -6,6 +6,7 @@ pub mod systems {
     pub mod pet;
     pub mod tournament;
     pub mod session;
+    pub mod position;
 }
 
 pub mod erc1155 {
@@ -21,6 +22,7 @@ pub mod models {
     pub mod core;
     pub mod gear;
     pub mod armour;
+    pub mod position;
     pub mod marketplace;
     pub mod weapon_stats;
     pub mod armor_stats;
@@ -28,6 +30,30 @@ pub mod models {
     pub mod pet_stats;
     pub mod tournament;
     pub mod session;
+    pub mod weapon {
+        pub mod blunt;
+        pub mod bow;
+        pub mod explosives;
+        pub mod firearm;
+        pub mod heavy_firearm;
+        pub mod polearm;
+        pub mod sword;
+    }
+    pub mod armor {
+        pub mod boots;
+        pub mod chest;
+        pub mod gloves;
+        pub mod helmet;
+        pub mod leg;
+        pub mod shield;
+    }
+    pub mod auxiliary {
+        pub mod drone;
+        pub mod pet;
+    }
+    pub mod vehicle {
+        pub mod base;
+    }
 }
 
 pub mod interfaces {
