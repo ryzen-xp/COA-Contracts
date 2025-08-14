@@ -1,4 +1,5 @@
 use crate::models::gear::GearType;
+use origami_random::dice::{Dice, DiceTrait};
 
 // Helper function to get the high 128 bits from a u256
 fn get_high(val: u256) -> u128 {
@@ -76,5 +77,47 @@ pub fn contains_gear_type(array: Array<u256>, gear_type: GearType) -> bool {
     };
 
     found
+}
+
+
+pub fn random_geartype() -> GearType {
+    let mut dice = DiceTrait::new(17, 'SEED');
+    let idx = dice.roll();
+
+    match idx {
+        0 => GearType::None,
+        1 => GearType::BluntWeapon,
+        2 => GearType::Sword,
+        3 => GearType::Bow,
+        4 => GearType::Firearm,
+        5 => GearType::Polearm,
+        6 => GearType::HeavyFirearms,
+        7 => GearType::Explosives,
+        8 => GearType::Helmet,
+        9 => GearType::ChestArmor,
+        10 => GearType::LegArmor,
+        11 => GearType::Boots,
+        12 => GearType::Gloves,
+        13 => GearType::Shield,
+        14 => GearType::Vehicle,
+        15 => GearType::Pet,
+        16 => GearType::Drone,
+        17 => GearType::Weapon,
+        _ => GearType::None,
+    }
+}
+
+
+pub fn get_max_upgrade_level(gear_type: GearType) -> u64 {
+    match gear_type {
+        GearType::Weapon | GearType::BluntWeapon | GearType::Sword | GearType::Bow |
+        GearType::Firearm | GearType::Polearm | GearType::HeavyFirearms |
+        GearType::Explosives => 10,
+        GearType::Helmet | GearType::ChestArmor | GearType::LegArmor | GearType::Boots |
+        GearType::Gloves | GearType::Shield => 5, // All armor-types
+        GearType::Vehicle => 3,
+        GearType::Pet | GearType::Drone => 7,
+        _ => 1,
+    }
 }
 

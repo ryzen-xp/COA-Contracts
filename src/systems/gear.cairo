@@ -3,7 +3,10 @@ pub mod GearActions {
     use crate::interfaces::gear::IGear;
     use dojo::event::EventStorage;
     use super::super::super::models::gear::GearTrait;
-    use starknet::{ContractAddress, get_block_timestamp, get_contract_address, get_caller_address};
+    use starknet::{
+        ContractAddress, get_block_timestamp, get_contract_address, get_caller_address,
+        contract_address_const,
+    };
     use crate::models::player::PlayerTrait;
     use dojo::world::WorldStorage;
     use dojo::model::ModelStorage;
@@ -14,6 +17,7 @@ pub mod GearActions {
     use crate::models::core::Operator;
     use crate::helpers::base::generate_id;
     use crate::helpers::base::ContractAddressDefault;
+    use crate::helpers::gear::{random_geartype, get_max_upgrade_level};
     // Import session model for validation
     use crate::models::session::SessionKey;
     use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
@@ -428,6 +432,38 @@ pub mod GearActions {
             }
 
             world.write_model(@config_state);
+        }
+
+        //@ryzen-xp
+        // random gear  item genrator
+        fn random_gear_generator(ref self: ContractState) -> Gear {
+            let mut world = self.world_default();
+
+            let gear_type = random_geartype();
+
+            let item_type: felt252 = Into::<GearType, felt252>::into(gear_type);
+
+            let asset_id: u256 = generate_id(item_type, ref world);
+
+            let owner: ContractAddress = contract_address_const::<0>();
+
+            let max_upgrade_level: u64 = get_max_upgrade_level(gear_type);
+
+            let gear = Gear {
+                id: asset_id,
+                item_type,
+                asset_id,
+                variation_ref: 0,
+                total_count: 1,
+                in_action: false,
+                upgrade_level: 0,
+                owner,
+                max_upgrade_level,
+                min_xp_needed: 0,
+                spawned: true,
+            };
+            world.write_model(@gear);
+            gear
         }
     }
 
