@@ -58,7 +58,7 @@ pub trait IGear<TContractState> {
     ) -> Array<u256>; // returns an array of items that were picked
     // adds an item to the list of items
 
-    fn random_gear_generator(ref self: TContractState) -> Gear;
+    fn random_gear_generator(ref self: TContractState, session_id: felt252) -> Gear;
 }
 /// TODO: Implement gear levels: Rare, Mythical, etc... these levels would determine its base stats
 /// and the max upgradeable stats.

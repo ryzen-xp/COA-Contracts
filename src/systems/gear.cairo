@@ -436,17 +436,14 @@ pub mod GearActions {
 
         //@ryzen-xp
         // random gear  item genrator
-        fn random_gear_generator(ref self: ContractState) -> Gear {
+        fn random_gear_generator(ref self: ContractState, session_id: felt252) -> Gear {
+            self.validate_session_for_action(session_id);
+
             let mut world = self.world_default();
-
             let gear_type = random_geartype();
-
             let item_type: felt252 = Into::<GearType, felt252>::into(gear_type);
-
             let asset_id: u256 = generate_id(item_type, ref world);
-
             let owner: ContractAddress = contract_address_const::<0>();
-
             let max_upgrade_level: u64 = get_max_upgrade_level(gear_type);
 
             let gear = Gear {
@@ -462,6 +459,7 @@ pub mod GearActions {
                 min_xp_needed: 0,
                 spawned: true,
             };
+
             world.write_model(@gear);
             gear
         }
