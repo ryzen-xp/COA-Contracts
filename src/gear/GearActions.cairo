@@ -1,16 +1,15 @@
 use starknet::{ContractAddress, get_caller_address};
 use core::num::traits::Zero;
-use crate::models::gear::{Gear, GearType};
+use crate::models::gear::{Gear};
 use crate::models::player::{Player, Body, PlayerTrait, Errors};
 use crate::models::core::Contract;
 use crate::erc1155::erc1155::{IERC1155Dispatcher, IERC1155DispatcherTrait};
-use crate::helpers::gear::{parse_id, get_high};
+use crate::helpers::gear::{get_high};
 use crate::helpers::body::BodyTrait;
 use dojo::event::EventStorage;
 use dojo::model::{ModelStorage, Model};
 
 const VEHICLE_ID: u256 = 0x30000;
-
 
 #[starknet::interface]
 pub trait GearActionsTrait<T> {
@@ -21,14 +20,10 @@ pub trait GearActionsTrait<T> {
 pub mod GearActions {
     use super::*;
 
-    #[event]
-    #[derive(Drop, starknet::Event)]
-    enum Event {
-        ExchangedItem: ExchangedItem,
-    }
-
-    #[derive(Drop, starknet::Event)]
+    #[derive(Copy, Drop, Serde)]
+    #[dojo::event]
     struct ExchangedItem {
+        #[key]
         player_id: ContractAddress,
         in_item_id: u256,
         out_item_id: u256,
@@ -69,7 +64,7 @@ pub mod GearActions {
             assert(body.is_item_equipped(out_asset_id), Errors::OUT_ITEM_NOT_EQUIPPED);
 
             // Simple placeholder vehicle logic check for the moment
-            // let vehicle_equipped = player.clone().is_equipped(get_high(VEHICLE_ID)) != 0_u256;
+            // let vehicle_equipped = player.is_equipped(get_high(VEHICLE_ID)) != 0_u256;
             let vehicle_equipped = !body.vehicle.is_zero();
             let is_vehicle_scenario = !in_gear.spawned && vehicle_equipped;
 
@@ -79,30 +74,26 @@ pub mod GearActions {
                 // Verify `in_item` token ownership
                 let balance = erc1155.balance_of(player_id, in_asset_id);
                 assert(!balance.is_zero(), Errors::ITEM_TOKEN_NOT_OWNED);
+                // Optional cross-check
+                assert(in_gear.owner == player_id, Errors::IN_ITEM_NOT_OWNED);
 
-                // Verify in_item_id not equipped
+                // Verify exact in_item_id is not already equipped
                 assert(!body.is_item_equipped(in_asset_id), Errors::IN_ITEM_ALREADY_EQUIPPED);
 
-                // Unequip out_item_id if equipped
-                let mut was_equipped = false;
-                if player.clone().is_equipped(get_high(out_asset_id)) != 0 {
-                    body.unequip(out_asset_id);
-                    was_equipped = true;
-                };
+                // Unequip out_item_id
+                let _ = body.unequip(out_asset_id);
 
-                // Update equipped array if out_item_id was equipped
-                if was_equipped {
-                    let mut equipped = player.equipped;
-                    let mut new_equipped = array![];
-                    let mut i = 0;
-                    while i < equipped.len() {
-                        if *equipped.at(i) != out_asset_id {
-                            new_equipped.append(*equipped.at(i));
-                        }
-                        i += 1;
-                    };
-                    player.equipped = new_equipped;
-                }
+                // Update equipped array
+                let mut equipped = player.equipped;
+                let mut new_equipped = array![];
+                let mut i = 0;
+                while i < equipped.len() {
+                    if *equipped.at(i) != out_asset_id {
+                        new_equipped.append(*equipped.at(i));
+                    }
+                    i += 1;
+                };
+                player.equipped = new_equipped;
 
                 if body.can_equip(in_asset_id) {
                     // Success: Equip in_item_id (no NFT transfers)
@@ -115,24 +106,25 @@ pub mod GearActions {
                         .write_member(
                             Model::<Player>::ptr_from_keys(player_id), selector!("body"), body,
                         );
+
+                    let event = ExchangedItem { player_id, in_item_id, out_item_id };
+                    world.emit_event(@event);
                 } else {
-                    // Failure: Rollback out_item_id if it was unequipped
-                    if was_equipped {
-                        body.equip_item(out_asset_id);
-                        player.equipped.append(out_asset_id);
-                        world.write_model(@player);
-                        world
-                            .write_member(
-                                Model::<Player>::ptr_from_keys(player_id), selector!("body"), body,
-                            );
-                    }
+                    // Failure: Rollback out_item_id
+                    body.equip_item(out_asset_id);
+                    player.equipped.append(out_asset_id);
+                    world.write_model(@player);
+                    world
+                        .write_member(
+                            Model::<Player>::ptr_from_keys(player_id), selector!("body"), body,
+                        );
                 }
             } else {
                 // Scenario 1: Player ⇄ Environment (Transfers and Swapping logic)
 
                 // Unequip out_item_id
                 let _ = body.unequip(out_asset_id);
-                let mut equipped = player.equipped.clone();
+                let mut equipped = player.equipped;
                 let mut new_equipped = array![];
                 let mut i = 0;
                 while i < equipped.len() {
@@ -175,6 +167,9 @@ pub mod GearActions {
                         .write_member(
                             Model::<Player>::ptr_from_keys(player_id), selector!("body"), body,
                         );
+
+                    let event = ExchangedItem { player_id, in_item_id, out_item_id };
+                    world.emit_event(@event);
                 } else {
                     // Failure: Rollback out_item_id
                     body.equip_item(out_asset_id);
@@ -187,9 +182,6 @@ pub mod GearActions {
                         );
                 }
             }
-
-            let event = ExchangedItem { player_id, in_item_id, out_item_id };
-            // world.emit_event(@event);
         }
     }
 
