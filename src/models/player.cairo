@@ -11,7 +11,7 @@ use crate::models::gear::GearType;
 use crate::helpers::gear::{parse_id};
 
 const DEFAULT_HP: u256 = 500;
-const DEFAULT_MAX_EQUIPPABLE_SLOT: u32 = 10;
+pub const DEFAULT_MAX_EQUIPPABLE_SLOT: u32 = 10;
 const WAIST_MAX_SLOTS: u32 = 8;
 
 
@@ -215,19 +215,14 @@ pub impl PlayerImpl of PlayerTrait {
     }
 
     fn equip(ref self: Player, item_id: u256) {
-        assert(item_id.is_non_zero(), Errors::INVALID_ITEM_ID);
-
-        // check if the item is equippable
-        assert(self.is_equippable(item_id), Errors::CANNOT_EQUIP);
-
         // check if the player has enough slots to equip this item
         assert(self.equipped.len() < self.max_equip_slot, Errors::INSUFFICIENT_SLOTS);
-
         self.body.equip_item(item_id);
 
         // add the item to the equipped list
         self.equipped.append(item_id);
     }
+
     fn is_equipped(self: Player, type_id: u128) -> u256 {
         // let equipped = self.equipped; // use this array to check if the item is equipped
         self.body.get_equipped_item(type_id)

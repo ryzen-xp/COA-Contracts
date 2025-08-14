@@ -63,6 +63,7 @@ pub mod GearActions {
             let contract: Contract = world.read_model('contract_id');
             let erc1155_address = contract.erc1155;
             let warehouse_address = contract.warehouse;
+            let erc1155 = IERC1155Dispatcher { contract_address: erc1155_address };
 
             // Read Player and Body
             let mut player: Player = world.read_model(player_id);
@@ -81,16 +82,16 @@ pub mod GearActions {
             assert(body.clone().get_equipped_item(get_high(out_asset_id)) != 0_u256, Errors::OUT_ITEM_NOT_EQUIPPED);
 
             // Simple placeholder vehicle logic check for the moment 
-            let vehicle_equipped = player.clone().is_equipped(get_high(VEHICLE_ID)) != 0_u256; // | body.vehicle != 0_u256;
+            // let vehicle_equipped = player.clone().is_equipped(get_high(VEHICLE_ID)) != 0_u256;
+            let vehicle_equipped = !body.vehicle.is_zero();
             let is_vehicle_scenario = !in_gear.spawned && vehicle_equipped;
-            let erc1155 = IERC1155Dispatcher { contract_address: erc1155_address };
 
             if is_vehicle_scenario {
                 // Scenario 2: Player ⇄ Vehicle (Swapping `in_item` for `out_item`)
 
                 // Verify `in_item` token ownership
                 let balance = erc1155.balance_of(player_id, in_asset_id);
-                assert(balance > 0_u256, Errors::ITEM_TOKEN_NOT_OWNED);
+                assert(!balance.is_zero(), Errors::ITEM_TOKEN_NOT_OWNED);
 
                 // Verify in_item_id not equipped
                 assert(body.clone().get_equipped_item(get_high(in_asset_id)) == 0, Errors::IN_ITEM_ALREADY_EQUIPPED);

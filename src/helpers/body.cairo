@@ -1,6 +1,8 @@
 use crate::models::player::Body;
 use crate::models::gear::GearType;
 use crate::helpers::gear::{parse_id, count_gear_in_array, contains_gear_type, get_high};
+use crate::models::player::{DEFAULT_MAX_EQUIPPABLE_SLOT, Errors};
+
 
 // Helper function to find the index of an item in an array
 fn find_item_index(array: @Array<u256>, item_id: u256) -> Option<u32> {
@@ -94,6 +96,11 @@ pub impl BodyImpl of BodyTrait {
     }
 
     fn equip_item(ref self: Body, item_id: u256) {
+        assert(item_id.is_non_zero(), Errors::INVALID_ITEM_ID);
+
+        // check if the item is equippable
+        assert(self.can_equip(item_id), Errors::CANNOT_EQUIP);
+
         let gear_type = parse_id(item_id);
 
         match gear_type {
@@ -137,7 +144,7 @@ pub impl BodyImpl of BodyTrait {
             self.off_body,
         ];
 
-        let mut result: u256 = 0;
+        let mut result: u256 = 0_u256;
         let mut found = false;
         let mut i = 0;
         let arrays_len = equipped_arrays.len();
