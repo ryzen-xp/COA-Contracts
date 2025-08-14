@@ -182,7 +182,7 @@ pub impl BodyImpl of BodyTrait {
     /// This method is slot-aware and type-safe, only removing items that are actually equipped.
     fn unequip(ref self: Body, item_id: u256) -> u256 {
         let gear_type = parse_id(item_id);
-        
+
         match gear_type {
             GearType::Helmet => {
                 if self.head == item_id {
@@ -191,7 +191,8 @@ pub impl BodyImpl of BodyTrait {
                     return unequipped;
                 }
             },
-            GearType::Shield | GearType::HeavyFirearms | GearType::Weapon => {
+            GearType::Shield | GearType::HeavyFirearms |
+            GearType::Weapon => {
                 if self.back == item_id {
                     let unequipped = self.back;
                     self.back = 0_u256;
@@ -205,7 +206,8 @@ pub impl BodyImpl of BodyTrait {
                     return unequipped;
                 }
             },
-            GearType::BluntWeapon | GearType::Sword | GearType::Bow | GearType::Polearm => {
+            GearType::BluntWeapon | GearType::Sword | GearType::Bow |
+            GearType::Polearm => {
                 // Check back slot first
                 if self.back == item_id {
                     let unequipped = self.back;
@@ -219,7 +221,8 @@ pub impl BodyImpl of BodyTrait {
                     return unequipped;
                 }
             },
-            GearType::Firearm | GearType::Explosives => {
+            GearType::Firearm |
+            GearType::Explosives => {
                 if let Option::Some(index) = find_item_index(@self.waist, item_id) {
                     let unequipped = *self.waist.at(index);
                     self.waist = remove_item_at_index(self.waist, index);
@@ -254,7 +257,8 @@ pub impl BodyImpl of BodyTrait {
                     return unequipped;
                 }
             },
-            GearType::Pet | GearType::Drone => {
+            GearType::Pet |
+            GearType::Drone => {
                 if let Option::Some(index) = find_item_index(@self.off_body, item_id) {
                     let unequipped = *self.off_body.at(index);
                     self.off_body = remove_item_at_index(self.off_body, index);
@@ -283,9 +287,9 @@ pub impl BodyImpl of BodyTrait {
                     self.right_leg = remove_item_at_index(self.right_leg, index);
                     return unequipped;
                 }
-            }
+            },
         }
-        
+
         // Item not found in any slot
         0_u256
     }
@@ -297,8 +301,16 @@ pub impl BodyImpl of BodyTrait {
         }
 
         let arrays = array![
-            self.hands, self.left_hand, self.right_hand, self.left_leg, self.right_leg,
-            self.upper_torso, self.lower_torso, self.waist, self.feet, self.off_body
+            self.hands,
+            self.left_hand,
+            self.right_hand,
+            self.left_leg,
+            self.right_leg,
+            self.upper_torso,
+            self.lower_torso,
+            self.waist,
+            self.feet,
+            self.off_body,
         ];
 
         let mut i = 0;
@@ -314,5 +326,4 @@ pub impl BodyImpl of BodyTrait {
 
         equipped
     }
-
 }

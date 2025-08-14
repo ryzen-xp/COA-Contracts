@@ -53,7 +53,8 @@ pub mod GearActions {
 
             // Read Player and Body
             let mut player: Player = world.read_model(player_id);
-            let mut body: Body = world.read_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"));
+            let mut body: Body = world
+                .read_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"));
 
             // Read in_item_id to determine scenario
             let mut in_gear: Gear = world.read_model(in_item_id);
@@ -67,7 +68,7 @@ pub mod GearActions {
             // Verify the exact out_item_id is equipped
             assert(body.is_item_equipped(out_asset_id), Errors::OUT_ITEM_NOT_EQUIPPED);
 
-            // Simple placeholder vehicle logic check for the moment 
+            // Simple placeholder vehicle logic check for the moment
             // let vehicle_equipped = player.clone().is_equipped(get_high(VEHICLE_ID)) != 0_u256;
             let vehicle_equipped = !body.vehicle.is_zero();
             let is_vehicle_scenario = !in_gear.spawned && vehicle_equipped;
@@ -80,7 +81,10 @@ pub mod GearActions {
                 assert(!balance.is_zero(), Errors::ITEM_TOKEN_NOT_OWNED);
 
                 // Verify in_item_id not equipped
-                assert(body.clone().get_equipped_item(get_high(in_asset_id)) == 0, Errors::IN_ITEM_ALREADY_EQUIPPED);
+                assert(
+                    body.clone().get_equipped_item(get_high(in_asset_id)) == 0,
+                    Errors::IN_ITEM_ALREADY_EQUIPPED,
+                );
 
                 // Unequip out_item_id if equipped
                 let mut was_equipped = false;
@@ -110,14 +114,20 @@ pub mod GearActions {
 
                     player.equipped.append(in_asset_id);
                     world.write_model(@player);
-                    world.write_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"), body);
+                    world
+                        .write_member(
+                            Model::<Player>::ptr_from_keys(player_id), selector!("body"), body,
+                        );
                 } else {
                     // Failure: Rollback out_item_id if it was unequipped
                     if was_equipped {
                         body.equip_item(out_asset_id);
                         player.equipped.append(out_asset_id);
                         world.write_model(@player);
-                        world.write_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"), body);
+                        world
+                            .write_member(
+                                Model::<Player>::ptr_from_keys(player_id), selector!("body"), body,
+                            );
                     }
                 }
             } else {
@@ -139,7 +149,10 @@ pub mod GearActions {
                 if body.can_equip(in_asset_id) {
                     // Success: Transfer NFTs and equip in_item_id
                     // Player -> Warehouse
-                    erc1155.safe_transfer_from(player_id, warehouse_address, out_asset_id, 1, array![].span());
+                    erc1155
+                        .safe_transfer_from(
+                            player_id, warehouse_address, out_asset_id, 1, array![].span(),
+                        );
 
                     // let mut out_gear: Gear = world.read_model(out_item_id);
                     out_gear.spawned = true;
@@ -149,7 +162,10 @@ pub mod GearActions {
                     // let mut in_gear: Gear = world.read_model(in_item_id);
                     if in_gear.spawned {
                         // Warehouse -> Player
-                        erc1155.safe_transfer_from(warehouse_address, player_id, in_asset_id, 1, array![].span());
+                        erc1155
+                            .safe_transfer_from(
+                                warehouse_address, player_id, in_asset_id, 1, array![].span(),
+                            );
                         in_gear.spawned = false;
                         in_gear.owner = player_id;
                         world.write_model(@in_gear);
@@ -158,23 +174,24 @@ pub mod GearActions {
                     body.equip_item(in_asset_id);
                     player.equipped.append(in_asset_id);
                     world.write_model(@player);
-                    world.write_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"), body);
+                    world
+                        .write_member(
+                            Model::<Player>::ptr_from_keys(player_id), selector!("body"), body,
+                        );
                 } else {
                     // Failure: Rollback out_item_id
                     body.equip_item(out_asset_id);
                     player.equipped.append(out_asset_id);
 
                     world.write_model(@player);
-                    world.write_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"), body);
+                    world
+                        .write_member(
+                            Model::<Player>::ptr_from_keys(player_id), selector!("body"), body,
+                        );
                 }
             }
 
-            let event = ExchangedItem {
-                player_id,
-                in_item_id,
-                out_item_id,
-            };
-                    
+            let event = ExchangedItem { player_id, in_item_id, out_item_id };
             // world.emit_event(@event);
         }
     }

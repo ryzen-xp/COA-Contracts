@@ -50,7 +50,7 @@ pub mod CoreActions {
             escrow_address,
             registration_fee,
             paused: false,
-            warehouse
+            warehouse,
         };
         world.write_model(@contract);
     }
