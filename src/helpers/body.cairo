@@ -97,7 +97,7 @@ pub impl BodyImpl of BodyTrait {
     }
 
     fn equip_item(ref self: Body, item_id: u256) {
-        assert(item_id.is_non_zero(), Errors::INVALID_ITEM_ID);
+        assert(!item_id.is_zero(), Errors::INVALID_ITEM_ID);
 
         // check if the item is equippable
         assert(self.can_equip(item_id), Errors::CANNOT_EQUIP);
