@@ -81,10 +81,7 @@ pub mod GearActions {
                 assert(!balance.is_zero(), Errors::ITEM_TOKEN_NOT_OWNED);
 
                 // Verify in_item_id not equipped
-                assert(
-                    body.clone().get_equipped_item(get_high(in_asset_id)) == 0,
-                    Errors::IN_ITEM_ALREADY_EQUIPPED,
-                );
+                assert(!body.is_item_equipped(in_asset_id), Errors::IN_ITEM_ALREADY_EQUIPPED);
 
                 // Unequip out_item_id if equipped
                 let mut was_equipped = false;
