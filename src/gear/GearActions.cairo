@@ -1,11 +1,11 @@
 use starknet::{ContractAddress, get_caller_address};
 use core::num::traits::Zero;
-use dojo::world::{WorldStorage};
+// use dojo::world::{WorldStorage};
 use crate::models::gear::{Gear, GearType};
 use crate::models::player::{Player, Body, PlayerTrait, Errors};
 use crate::models::core::Contract;
 use crate::erc1155::erc1155::{IERC1155Dispatcher, IERC1155DispatcherTrait};
-use crate::helpers::gear::{parse_id, count_gear_in_array, contains_gear_type, get_high};
+use crate::helpers::gear::{parse_id, get_high};
 use crate::helpers::body::BodyTrait;
 use dojo::event::EventStorage;
 use dojo::model::{ModelStorage, Model};
@@ -13,7 +13,6 @@ use dojo::model::{ModelStorage, Model};
 const VEHICLE_ID: u256 = 0x30000;
 
 
-// define the interface
 #[starknet::interface]
 trait GearActionsTrait<T> {
     fn exchange(ref self: T, in_item_id: u256, out_item_id: u256);
@@ -63,6 +62,7 @@ pub mod GearActions {
             // Read Contract model for ERC1155 address
             let contract: Contract = world.read_model('contract_id');
             let erc1155_address = contract.erc1155;
+            let warehouse_address = contract.warehouse;
 
             // Read Player and Body
             let mut player: Player = world.read_model(player_id);
@@ -77,7 +77,7 @@ pub mod GearActions {
             // Confirm possession of `out_item` before proceeding
             assert(out_gear.owner == player_id, Errors::OUT_ITEM_NOT_OWNED);
 
-            // Verify out_item_id is equipped
+            // Verify the exact out_item_id is equipped
             assert(body.clone().get_equipped_item(get_high(out_asset_id)) != 0_u256, Errors::OUT_ITEM_NOT_EQUIPPED);
 
             // Simple placeholder vehicle logic check for the moment 
@@ -125,7 +125,7 @@ pub mod GearActions {
                     world.write_model(@player);
                     world.write_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"), body);
 
-                    self.emit(ExchangedItem { player_id, in_item_id, out_item_id, scenario: 'VEHICLE' });
+                    // world.emit_event(@ExchangedItem { player_id, in_item_id, out_item_id, scenario: 'VEHICLE' });
                 } else {
                     // Failure: Rollback out_item_id if it was unequipped
                     if was_equipped {
@@ -134,7 +134,7 @@ pub mod GearActions {
                         world.write_model(@player);
                         world.write_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"), body);
                     }
-                    self.emit(ExchangeFailed { player_id, in_item_id, out_item_id, reason: 'CANNOT EQUIP' });
+                    // world.emit_event(@ExchangeFailed { player_id, in_item_id, out_item_id, reason: 'CANNOT EQUIP' });
                 }
             } else {
                 // Scenario 1: Player ⇄ Environment (Transfers and Swapping logic)
@@ -154,16 +154,20 @@ pub mod GearActions {
 
                 if body.can_equip(in_asset_id) {
                     // Success: Transfer NFTs and equip in_item_id
-                    erc1155.safe_transfer_from(player_id, erc1155_address, out_asset_id, 1, array![].span());
+                    // Player -> Warehouse
+                    erc1155.safe_transfer_from(player_id, warehouse_address, out_asset_id, 1, array![].span());
 
                     // let mut out_gear: Gear = world.read_model(out_item_id);
                     out_gear.spawned = true;
+                    out_gear.owner = warehouse_address;
                     world.write_model(@out_gear);
 
                     // let mut in_gear: Gear = world.read_model(in_item_id);
                     if in_gear.spawned {
-                        erc1155.safe_transfer_from(erc1155_address, player_id, in_asset_id, 1, array![].span());
+                        // Warehouse -> Player
+                        erc1155.safe_transfer_from(warehouse_address, player_id, in_asset_id, 1, array![].span());
                         in_gear.spawned = false;
+                        in_gear.owner = player_id;
                         world.write_model(@in_gear);
                     }
 
@@ -172,7 +176,7 @@ pub mod GearActions {
                     world.write_model(@player);
                     world.write_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"), body);
 
-                    self.emit(ExchangedItem { player_id, in_item_id, out_item_id, scenario: 'ENVIRONMENT' });
+                    // world.emit_event(@ExchangedItem { player_id, in_item_id, out_item_id, scenario: 'ENVIRONMENT' });
                 } else {
                     // Failure: Rollback out_item_id
                     body.equip_item(out_asset_id);
@@ -181,7 +185,7 @@ pub mod GearActions {
                     world.write_model(@player);
                     world.write_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"), body);
 
-                    self.emit(ExchangeFailed { player_id, in_item_id, out_item_id, reason: 'CANNOT EQUIP' });
+                    // world.emit_event(@ExchangeFailed { player_id, in_item_id, out_item_id, reason: 'CANNOT EQUIP' });
                 }
             }
         }
