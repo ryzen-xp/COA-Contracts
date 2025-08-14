@@ -1,6 +1,5 @@
 use starknet::{ContractAddress, get_caller_address};
 use core::num::traits::Zero;
-// use dojo::world::{WorldStorage};
 use crate::models::gear::{Gear, GearType};
 use crate::models::player::{Player, Body, PlayerTrait, Errors};
 use crate::models::core::Contract;
@@ -14,7 +13,7 @@ const VEHICLE_ID: u256 = 0x30000;
 
 
 #[starknet::interface]
-trait GearActionsTrait<T> {
+pub trait GearActionsTrait<T> {
     fn exchange(ref self: T, in_item_id: u256, out_item_id: u256);
 }
 
@@ -22,14 +21,10 @@ trait GearActionsTrait<T> {
 pub mod GearActions {
     use super::*;
 
-    #[storage]
-    struct Storage {}
-
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         ExchangedItem: ExchangedItem,
-        ExchangeFailed: ExchangeFailed,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -37,15 +32,6 @@ pub mod GearActions {
         player_id: ContractAddress,
         in_item_id: u256,
         out_item_id: u256,
-        scenario: felt252,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct ExchangeFailed {
-        player_id: ContractAddress,
-        in_item_id: u256,
-        out_item_id: u256,
-        reason: felt252,
     }
 
     #[abi(embed_v0)]
@@ -56,7 +42,7 @@ pub mod GearActions {
             assert(!out_item_id.is_zero(), Errors::INVALID_ITEM_ID);
 
             // Get the game world
-            let mut world = self.world(@"coa_world");
+            let mut world = self.world_default();
             let player_id = get_caller_address();
 
             // Read Contract model for ERC1155 address
@@ -125,8 +111,6 @@ pub mod GearActions {
                     player.equipped.append(in_asset_id);
                     world.write_model(@player);
                     world.write_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"), body);
-
-                    // world.emit_event(@ExchangedItem { player_id, in_item_id, out_item_id, scenario: 'VEHICLE' });
                 } else {
                     // Failure: Rollback out_item_id if it was unequipped
                     if was_equipped {
@@ -135,7 +119,6 @@ pub mod GearActions {
                         world.write_model(@player);
                         world.write_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"), body);
                     }
-                    // world.emit_event(@ExchangeFailed { player_id, in_item_id, out_item_id, reason: 'CANNOT EQUIP' });
                 }
             } else {
                 // Scenario 1: Player ⇄ Environment (Transfers and Swapping logic)
@@ -176,8 +159,6 @@ pub mod GearActions {
                     player.equipped.append(in_asset_id);
                     world.write_model(@player);
                     world.write_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"), body);
-
-                    // world.emit_event(@ExchangedItem { player_id, in_item_id, out_item_id, scenario: 'ENVIRONMENT' });
                 } else {
                     // Failure: Rollback out_item_id
                     body.equip_item(out_asset_id);
@@ -185,10 +166,23 @@ pub mod GearActions {
 
                     world.write_model(@player);
                     world.write_member(Model::<Player>::ptr_from_keys(player_id), selector!("body"), body);
-
-                    // world.emit_event(@ExchangeFailed { player_id, in_item_id, out_item_id, reason: 'CANNOT EQUIP' });
                 }
             }
+
+            let event = ExchangedItem {
+                player_id,
+                in_item_id,
+                out_item_id,
+            };
+                    
+            // world.emit_event(@event);
+        }
+    }
+
+    #[generate_trait]
+    impl InternalImpl of InternalTrait {
+        fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
+            self.world(@"coa")
         }
     }
 }
