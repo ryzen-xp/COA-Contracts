@@ -30,7 +30,7 @@ pub struct Body {
     pub feet: Array<u256>, // For Boots
     // Non-body-worn gear
     pub off_body: Array<u256>, // For drones/pets/AI companions — max 1 item
-    pub vehicle: u256, // For vehicles
+    pub vehicle: u256,
 }
 
 #[dojo::model]
