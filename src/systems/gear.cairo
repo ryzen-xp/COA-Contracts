@@ -17,7 +17,7 @@ pub mod GearActions {
     use crate::models::core::Operator;
     use crate::helpers::base::generate_id;
     use crate::helpers::base::ContractAddressDefault;
-    use crate::helpers::gear::{random_geartype, get_max_upgrade_level};
+    use crate::helpers::gear::{random_geartype, get_max_upgrade_level, get_min_xp_needed};
     // Import session model for validation
     use crate::models::session::SessionKey;
     use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
@@ -445,6 +445,7 @@ pub mod GearActions {
             let asset_id: u256 = generate_id(item_type, ref world);
             let owner: ContractAddress = contract_address_const::<0>();
             let max_upgrade_level: u64 = get_max_upgrade_level(gear_type);
+            let min_xp_needed: u256 = get_min_xp_needed(gear_type);
 
             let gear = Gear {
                 id: asset_id,
@@ -456,7 +457,7 @@ pub mod GearActions {
                 upgrade_level: 0,
                 owner,
                 max_upgrade_level,
-                min_xp_needed: 0,
+                min_xp_needed,
                 spawned: true,
             };
 

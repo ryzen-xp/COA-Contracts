@@ -79,7 +79,7 @@ pub fn contains_gear_type(array: Array<u256>, gear_type: GearType) -> bool {
     found
 }
 
-
+//@ryzen-xp
 pub fn random_geartype() -> GearType {
     let mut dice = DiceTrait::new(17, 'SEED');
     let idx = dice.roll();
@@ -107,17 +107,48 @@ pub fn random_geartype() -> GearType {
     }
 }
 
-
+//@ryzen-xp
+// THis geive us max level of any Gear can be upgraded!!
+// NOTE:: max level scales with gear power; not final in-game .
 pub fn get_max_upgrade_level(gear_type: GearType) -> u64 {
     match gear_type {
         GearType::Weapon | GearType::BluntWeapon | GearType::Sword | GearType::Bow |
         GearType::Firearm | GearType::Polearm | GearType::HeavyFirearms |
         GearType::Explosives => 10,
         GearType::Helmet | GearType::ChestArmor | GearType::LegArmor | GearType::Boots |
-        GearType::Gloves | GearType::Shield => 5, // All armor-types
+        GearType::Gloves | GearType::Shield => 5,
         GearType::Vehicle => 3,
         GearType::Pet | GearType::Drone => 7,
         _ => 1,
+    }
+}
+
+//@ryzen-xp
+// From here we get min XP need to pick the items.
+//NOTE:: XP scales with gear power; not final in-game XP system.
+pub fn get_min_xp_needed(gear_type: GearType) -> u256 {
+    match gear_type {
+        // high damage
+        GearType::HeavyFirearms => 50, // Machine guns, miniguns
+        GearType::Explosives => 45, // RPGs, grenades
+        GearType::Firearm => 40, // Rifles, pistols
+        GearType::Bow => 35, // Bows, crossbows
+        GearType::Sword => 30, // Katanas, longswords
+        GearType::Polearm => 28, // Spears, halberds
+        GearType::BluntWeapon => 25, // Hammers, maces
+        GearType::Weapon => 20, // Generic melee/light weapons
+        // Defensive gear
+        GearType::Helmet => 15,
+        GearType::ChestArmor => 18,
+        GearType::LegArmor => 14,
+        GearType::Boots => 12,
+        GearType::Gloves => 10,
+        GearType::Shield => 16,
+        // lower damage gear
+        GearType::Vehicle => 22, // Combat vehicles
+        GearType::Pet => 12, // Attack/support pets
+        GearType::Drone => 18, // Combat drones
+        _ => 5,
     }
 }
 
