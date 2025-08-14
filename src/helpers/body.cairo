@@ -2,6 +2,7 @@ use crate::models::player::Body;
 use crate::models::gear::GearType;
 use crate::helpers::gear::{parse_id, count_gear_in_array, contains_gear_type, get_high};
 use crate::models::player::{DEFAULT_MAX_EQUIPPABLE_SLOT, Errors};
+use core::num::traits::Zero;
 
 
 // Helper function to find the index of an item in an array
@@ -288,4 +289,30 @@ pub impl BodyImpl of BodyTrait {
         // Item not found in any slot
         0_u256
     }
+
+    // Check if an exact item_id is equipped anywhere on the body
+    fn is_item_equipped(self: @Body, item_id: u256) -> bool {
+        if *self.head == item_id || *self.back == item_id || *self.vehicle == item_id {
+            return true;
+        }
+
+        let arrays = array![
+            self.hands, self.left_hand, self.right_hand, self.left_leg, self.right_leg,
+            self.upper_torso, self.lower_torso, self.waist, self.feet, self.off_body
+        ];
+
+        let mut i = 0;
+        let mut equipped = false;
+        while i < arrays.len() {
+            let arr = arrays.at(i);
+            if find_item_index(*arr, item_id).is_some() {
+                equipped = true;
+                break;
+            }
+            i += 1;
+        };
+
+        equipped
+    }
+
 }

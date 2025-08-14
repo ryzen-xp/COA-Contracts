@@ -79,7 +79,7 @@ pub mod GearActions {
             assert(out_gear.owner == player_id, Errors::OUT_ITEM_NOT_OWNED);
 
             // Verify the exact out_item_id is equipped
-            assert(body.clone().get_equipped_item(get_high(out_asset_id)) != 0_u256, Errors::OUT_ITEM_NOT_EQUIPPED);
+            assert(body.is_item_equipped(out_asset_id), Errors::OUT_ITEM_NOT_EQUIPPED);
 
             // Simple placeholder vehicle logic check for the moment 
             // let vehicle_equipped = player.clone().is_equipped(get_high(VEHICLE_ID)) != 0_u256;
