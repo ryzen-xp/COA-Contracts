@@ -125,8 +125,8 @@ pub struct UpgradeConfigState {
 #[derive(Drop, Copy, Serde, Default)]
 pub struct GearTypeCounter {
     #[key]
-    pub gear_type_id: u128, // ID representing the gear type
-    pub count: u128 ,// Number of gears of this type created so far
+    pub gear_type_id: u128,
+    pub count: u128,
 }
 
 
