@@ -439,8 +439,6 @@ pub mod GearActions {
             world.write_model(@config_state);
         }
 
-        // ===== READ OPERATIONS IMPLEMENTATION =====
-
         fn get_gear_details_complete(
             ref self: ContractState, item_id: u256, session_id: felt252,
         ) -> Option<GearDetailsComplete> {

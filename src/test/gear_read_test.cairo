@@ -1,21 +1,14 @@
 #[cfg(test)]
 mod tests {
-    use coa::systems::gear::GearActions;
-    use coa::interfaces::gear::IGear;
     use coa::models::gear::{
-        Gear, GearType, GearLevelStats, UpgradeCost, UpgradeSuccessRate, GearDetailsComplete,
-        GearStatsCalculated, UpgradeInfo, OwnershipStatus, GearFilters, OwnershipFilter,
-        PaginationParams, SortParams, SortField, PaginatedGearResult, CombinedEquipmentEffects,
-        GearTrait,
+        Gear, GearType, GearDetailsComplete, GearStatsCalculated, UpgradeInfo, OwnershipStatus,
+        GearFilters, OwnershipFilter, PaginationParams, SortParams, SortField, PaginatedGearResult,
+        CombinedEquipmentEffects, GearTrait,
     };
-    use coa::models::weapon_stats::WeaponStats;
-    use coa::models::armor_stats::Armor;
     use coa::models::session::SessionKey;
     use coa::helpers::gear::{calculate_level_multiplier, apply_upgrade_multiplier};
     use coa::helpers::gear::parse_id;
     use starknet::{ContractAddress, contract_address_const, get_block_timestamp};
-    use dojo::world::{WorldStorage, WorldStorageTrait};
-    use dojo::model::ModelStorage;
     use core::num::traits::Zero;
 
     fn create_test_gear(id: u256, gear_type: GearType, level: u64, owner: ContractAddress) -> Gear {
@@ -93,35 +86,35 @@ mod tests {
 
         match weapon_back {
             Option::Some(t) => assert(t == GearType::Weapon, 'Should convert back to Weapon'),
-            Option::None => panic!("Weapon conversion should succeed"),
+            Option::None => assert!(false, "Weapon conversion should succeed"),
         }
 
         match sword_back {
             Option::Some(t) => assert(t == GearType::Sword, 'Should convert back to Sword'),
-            Option::None => panic!("Sword conversion should succeed"),
+            Option::None => assert(false, 'Sword conversion should succeed'),
         }
     }
 
     #[test]
     fn test_gear_trait_functions() {
         let player = contract_address_const::<0x123>();
-        let other_player = contract_address_const::<0x456>();
+        let _other_player = contract_address_const::<0x456>();
 
         // Test owned gear
         let owned_gear = create_test_gear(1, GearType::Sword, 1, player);
         assert(owned_gear.is_owned(), 'Should be owned');
-        assert!(!owned_gear.is_available_for_pickup(), "Owned gear should not be available");
-
+        assert!(
+            owned_gear.is_available_for_pickup() == false, "Owned gear should not be available",
+        );
         // Test unowned spawned gear
         let mut unowned_gear = create_test_gear(2, GearType::Sword, 1, Zero::zero());
         unowned_gear.spawned = true;
         assert(!unowned_gear.is_owned(), 'Should not be owned');
         assert(unowned_gear.is_available_for_pickup(), 'Should be available for pickup');
-
         // Test transfer function
         unowned_gear.transfer_to(player);
         assert(unowned_gear.owner == player, 'Owner should be updated');
-        assert!(!unowned_gear.spawned, "Should not be spawned after transfer");
+        assert!(unowned_gear.spawned == false, "Should not be spawned after transfer");
     }
 
     #[test]
@@ -209,19 +202,19 @@ mod tests {
                 assert(*types.at(0) == GearType::Sword, 'First type should be Sword');
                 assert(*types.at(1) == GearType::Bow, 'Second type should be Bow');
             },
-            Option::None => panic!("Gear types should be Some"),
+            Option::None => assert(false, 'Gear types should be Some'),
         }
 
         match filters.ownership_filter {
             Option::Some(filter) => assert(
                 filter == OwnershipFilter::Owned, 'Should filter owned items',
             ),
-            Option::None => panic!("Ownership filter should be Some"),
+            Option::None => assert(false, 'Ownership filter should be Some'),
         }
 
         match filters.spawned_only {
             Option::Some(spawned) => assert(!spawned, 'Should not filter spawned only'),
-            Option::None => panic!("Spawned filter should be Some"),
+            Option::None => assert(false, 'Spawned filter should be Some'),
         }
     }
 
@@ -268,7 +261,7 @@ mod tests {
     #[test]
     fn test_ownership_status_creation() {
         let player = contract_address_const::<0x123>();
-        let gear = create_test_gear(1, GearType::Sword, 5, player);
+        let _gear = create_test_gear(1, GearType::Sword, 5, player);
 
         let ownership_status = OwnershipStatus {
             is_owned: true,
@@ -303,7 +296,7 @@ mod tests {
 
         match upgrade_info.success_rate {
             Option::Some(rate) => assert(rate == 85, 'Success rate should be 85%'),
-            Option::None => panic!("Success rate should be Some"),
+            Option::None => assert(false, 'Success rate should be Some'),
         }
     }
 
@@ -363,7 +356,7 @@ mod tests {
                 assert(info.current_level == 3, 'Current level should be 3');
                 assert(info.max_level == 10, 'Max level should be 10');
             },
-            Option::None => panic!("Upgrade info should be Some"),
+            Option::None => assert(false, 'Upgrade info should be Some'),
         }
     }
 
@@ -372,7 +365,7 @@ mod tests {
     fn test_integration_with_existing_gear_system() {
         // Test that the new read operations work with existing gear functions
         let player = contract_address_const::<0x123>();
-        let session_id = 'test_session';
+        let _session_id = 'test_session';
 
         // This would test the actual integration in a real test environment
         // For now, we just verify the data structures are compatible
@@ -389,7 +382,7 @@ mod tests {
         let converted_type: Option<GearType> = gear_type_felt.try_into();
         match converted_type {
             Option::Some(t) => assert(t == GearType::Sword, 'Should convert back to Sword'),
-            Option::None => panic!("Conversion should succeed"),
+            Option::None => assert(false, 'Conversion should succeed'),
         }
     }
 
@@ -457,7 +450,7 @@ mod tests {
     fn test_gear_workflow_simulation() {
         // Simulate a complete gear workflow
         let player = contract_address_const::<0x123>();
-        let session = create_test_session(player);
+        let _session = create_test_session(player);
 
         // Create a sword at level 0
         let mut sword = create_test_gear(1, GearType::Sword, 0, player);
@@ -528,7 +521,7 @@ mod tests {
                 assert(gear.id == 1, 'Equipped item ID should be 1');
                 assert(gear.upgrade_level == 2, 'Equipped item should be level 2');
             },
-            Option::None => panic!("Should have equipped item"),
+            Option::None => assert(false, 'Should have equipped item'),
         }
 
         // Test empty slot

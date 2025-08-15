@@ -229,7 +229,7 @@ fn test_gear_total_held_with_session() {
     start_cheat_block_timestamp(gear_dispatcher.contract_address, 2000);
 
     // Test total_held_of with valid session
-    let total = gear_dispatcher.total_held_of(1_u8, session_id);
+    let total = gear_dispatcher.total_held_of(GearType::Weapon, session_id);
     assert(total == 0_u256, 'Should return 0 for now');
 
     stop_cheat_caller_address(gear_dispatcher.contract_address);

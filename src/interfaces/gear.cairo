@@ -60,8 +60,6 @@ pub trait IGear<TContractState> {
         ref self: TContractState, item_id: Array<u256>, session_id: felt252,
     ) -> Array<u256>; // returns an array of items that were picked
 
-    // ===== READ OPERATIONS =====
-
     // Core item detail operations
     fn get_gear_details_complete(
         ref self: TContractState, item_id: u256, session_id: felt252,
