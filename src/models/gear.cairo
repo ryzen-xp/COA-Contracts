@@ -91,7 +91,7 @@ pub struct UpgradeMaterial {
 
 // Model to store upgrade costs for each gear type and level
 #[dojo::model]
-#[derive(Drop, Serde)]
+#[derive(Drop, Clone, Serde)]
 pub struct UpgradeCost {
     #[key]
     pub gear_type: GearType,
@@ -102,7 +102,7 @@ pub struct UpgradeCost {
 
 // Model to store success rates for each gear type and level
 #[dojo::model]
-#[derive(Drop, Serde)]
+#[derive(Drop, Clone, Serde)]
 pub struct UpgradeSuccessRate {
     #[key]
     pub gear_type: GearType,
@@ -113,7 +113,7 @@ pub struct UpgradeSuccessRate {
 
 // Model to track the state of the upgrade data initialization process.
 #[dojo::model]
-#[derive(Drop, Copy, Serde, Default)]
+#[derive(Drop, Clone, Serde, Default)]
 pub struct UpgradeConfigState {
     #[key]
     pub singleton_key: u8, // Always 0, to ensure only one instance exists.
@@ -232,10 +232,8 @@ impl Felt252TryIntoGearType of TryInto<felt252, GearType> {
     }
 }
 
-// ===== READ OPERATION DATA STRUCTURES =====
-
 // Comprehensive gear details structure
-#[derive(Drop, Serde)]
+#[derive(Drop, Clone, Serde)]
 pub struct GearDetailsComplete {
     pub gear: Gear,
     pub calculated_stats: GearStatsCalculated,
@@ -244,7 +242,7 @@ pub struct GearDetailsComplete {
 }
 
 // Calculated stats based on current upgrade level
-#[derive(Drop, Serde)]
+#[derive(Drop, Clone, Serde)]
 pub struct GearStatsCalculated {
     pub damage: u64,
     pub range: u64,
@@ -262,7 +260,7 @@ pub struct GearStatsCalculated {
 }
 
 // Upgrade information
-#[derive(Drop, Serde)]
+#[derive(Drop, Clone, Serde)]
 pub struct UpgradeInfo {
     pub current_level: u64,
     pub max_level: u64,
@@ -274,7 +272,7 @@ pub struct UpgradeInfo {
 }
 
 // Ownership and availability status
-#[derive(Drop, Serde)]
+#[derive(Drop, Copy, Serde)]
 pub struct OwnershipStatus {
     pub is_owned: bool,
     pub owner: ContractAddress,
@@ -314,13 +312,13 @@ pub struct PaginationParams {
 }
 
 // Sort parameters
-#[derive(Drop, Serde)]
+#[derive(Drop, Copy, Serde)]
 pub struct SortParams {
     pub sort_by: SortField,
     pub ascending: bool,
 }
 
-#[derive(Drop, Serde, PartialEq)]
+#[derive(Drop, Copy, Serde, PartialEq)]
 pub enum SortField {
     Level,
     Damage,
@@ -330,7 +328,7 @@ pub enum SortField {
 }
 
 // Paginated result structure
-#[derive(Drop, Serde)]
+#[derive(Drop, Clone, Serde)]
 pub struct PaginatedGearResult {
     pub items: Array<GearDetailsComplete>,
     pub total_count: u32,
@@ -338,7 +336,7 @@ pub struct PaginatedGearResult {
 }
 
 // Equipment slot information
-#[derive(Drop, Serde)]
+#[derive(Drop, Copy, Serde)]
 pub struct EquipmentSlotInfo {
     pub slot_type: felt252,
     pub equipped_item: Option<Gear>,
@@ -346,7 +344,7 @@ pub struct EquipmentSlotInfo {
 }
 
 // Combined equipment effects
-#[derive(Drop, Serde)]
+#[derive(Drop, Clone, Serde)]
 pub struct CombinedEquipmentEffects {
     pub total_damage: u64,
     pub total_defense: u64,
@@ -354,4 +352,41 @@ pub struct CombinedEquipmentEffects {
     pub equipped_slots: Array<EquipmentSlotInfo>,
     pub empty_slots: Array<felt252>,
     pub set_bonuses: Array<(felt252, u64)> // (bonus_type, bonus_value)
+}
+
+// Important Clone impl
+impl OptionUpgradeCostImpl of Clone<Option<UpgradeCost>> {
+    fn clone(self: @Option<UpgradeCost>) -> Option<UpgradeCost> {
+        match self {
+            Option::Some(cost) => Option::Some(cost.clone()),
+            Option::None => Option::None,
+        }
+    }
+}
+
+impl OptionUpgradeInfoImpl of Clone<Option<UpgradeInfo>> {
+    fn clone(self: @Option<UpgradeInfo>) -> Option<UpgradeInfo> {
+        match self {
+            Option::Some(info) => Option::Some(info.clone()),
+            Option::None => Option::None,
+        }
+    }
+}
+
+impl OptionGearStatsCalculatedImpl of Clone<Option<GearStatsCalculated>> {
+    fn clone(self: @Option<GearStatsCalculated>) -> Option<GearStatsCalculated> {
+        match self {
+            Option::Some(geat_stats) => Option::Some(geat_stats.clone()),
+            Option::None => Option::None,
+        }
+    }
+}
+
+impl OptionArrayTupleImpl of Clone<Option<Array<(u256, u256)>>> {
+    fn clone(self: @Option<Array<(u256, u256)>>) -> Option<Array<(u256, u256)>> {
+        match self {
+            Option::Some(arr) => Option::Some(arr.clone()),
+            Option::None => Option::None,
+        }
+    }
 }

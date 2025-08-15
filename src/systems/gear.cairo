@@ -12,8 +12,8 @@ pub mod GearActions {
     use crate::models::gear::{
         Gear, GearProperties, GearType, UpgradeCost, UpgradeSuccessRate, UpgradeMaterial,
         GearLevelStats, UpgradeConfigState, GearDetailsComplete, GearStatsCalculated, UpgradeInfo,
-        OwnershipStatus, GearFilters, OwnershipFilter, PaginationParams, SortParams,
-        PaginatedGearResult, CombinedEquipmentEffects,
+        OwnershipStatus, GearFilters, OwnershipFilter, PaginationParams, SortParams, SortField,
+        PaginatedGearResult, CombinedEquipmentEffects, EquipmentSlotInfo,
     };
     use crate::models::weapon_stats::WeaponStats;
     use crate::models::armor_stats::Armor;
@@ -1125,27 +1125,593 @@ pub mod GearActions {
             sort: Option<SortParams>,
             owner_filter: Option<ContractAddress>,
         ) -> PaginatedGearResult {
-            // This is a simplified implementation
-            // In a real system, you'd need to iterate through all gear items
-            // and apply filters, sorting, and pagination
+            let world = self.world_default();
 
-            PaginatedGearResult { items: array![], total_count: 0, has_more: false }
+            // Simple pagination defaults
+            let limit = match @pagination {
+                Option::Some(p) => if *p.limit > 100 {
+                    100
+                } else {
+                    *p.limit
+                }, // Max 100 items
+                Option::None => 20,
+            };
+            let offset = match pagination {
+                Option::Some(p) => p.offset,
+                Option::None => 0,
+            };
+
+            let mut result_items: Array<GearDetailsComplete> = array![];
+            let mut total_checked = 0_u32;
+            let mut items_found = 0_u32;
+
+            // Check limited range to control gas usage
+            let max_checks = 500_u256;
+            let mut current_id = 1_u256;
+
+            while current_id <= max_checks && result_items.len() < limit {
+                let gear: Gear = world.read_model(current_id);
+
+                // Skip non-existent items
+                if gear.id == 0 {
+                    current_id += 1;
+                    continue;
+                }
+
+                // Quick owner check
+                if let Option::Some(owner) = owner_filter {
+                    if gear.owner != owner {
+                        current_id += 1;
+                        continue;
+                    }
+                }
+
+                // Basic filtering (minimal)
+                let passes_filters = match @filters {
+                    Option::Some(f) => {
+                        // Only check essential filters
+                        if let Option::Some(spawned_only) = f.spawned_only {
+                            if *spawned_only && !gear.spawned {
+                                false
+                            } else {
+                                true
+                            }
+                        } else {
+                            true
+                        }
+                    },
+                    Option::None => true,
+                };
+
+                if passes_filters {
+                    items_found += 1;
+
+                    // Skip for offset
+                    if items_found <= offset {
+                        current_id += 1;
+                        continue;
+                    }
+
+                    // Create minimal gear details
+                    let calculated_stats = self._calculate_gear_stats(@gear);
+                    let ownership_status = OwnershipStatus {
+                        is_owned: !gear.owner.is_zero(),
+                        owner: gear.owner,
+                        is_spawned: gear.spawned,
+                        is_available_for_pickup: gear.spawned && gear.owner.is_zero(),
+                        is_equipped: gear.in_action,
+                        meets_xp_requirement: true,
+                    };
+
+                    let gear_details = GearDetailsComplete {
+                        gear,
+                        calculated_stats,
+                        upgrade_info: Option::None, // Skip for performance
+                        ownership_status,
+                    };
+
+                    result_items.append(gear_details);
+                }
+
+                current_id += 1;
+                total_checked += 1;
+            };
+
+            PaginatedGearResult {
+                items: result_items,
+                total_count: items_found,
+                has_more: current_id <= max_checks && items_found > (offset + limit),
+            }
+        }
+
+        fn _passes_filters(
+            self: @ContractState, gear: @Gear, filters: Option<GearFilters>,
+        ) -> bool {
+            if filters.is_none() {
+                return false;
+            }
+            let filters = filters.unwrap();
+
+            // Check gear type filter
+            if let Option::Some(allowed_types) = filters.gear_types {
+                let gear_type = parse_id(*gear.asset_id);
+                let mut type_matches = false;
+                let mut i = 0;
+                while i < allowed_types.len() {
+                    if gear_type == *allowed_types.at(i) {
+                        type_matches = true;
+                        break;
+                    }
+                    i += 1;
+                };
+                if !type_matches {
+                    return false;
+                }
+            }
+
+            // Check level range
+            if let Option::Some(min_level) = filters.min_level {
+                if *gear.upgrade_level < min_level {
+                    return false;
+                }
+            }
+
+            if let Option::Some(max_level) = filters.max_level {
+                if *gear.upgrade_level > max_level {
+                    return false;
+                }
+            }
+
+            // Check XP requirements
+            if let Option::Some(min_xp) = filters.min_xp_required {
+                if *gear.min_xp_needed < min_xp {
+                    return false;
+                }
+            }
+
+            if let Option::Some(max_xp) = filters.max_xp_required {
+                if *gear.min_xp_needed > max_xp {
+                    return false;
+                }
+            }
+
+            // Check ownership filter
+            if let Option::Some(ownership_filter) = filters.ownership_filter {
+                match ownership_filter {
+                    OwnershipFilter::Owned => { if gear.owner.is_zero() {
+                        return false;
+                    } },
+                    OwnershipFilter::NotOwned => { if !gear.owner.is_zero() {
+                        return false;
+                    } },
+                    OwnershipFilter::Available => {
+                        if !(*gear.spawned && gear.owner.is_zero()) {
+                            return false;
+                        }
+                    },
+                    OwnershipFilter::Equipped => { if !*gear.in_action {
+                        return false;
+                    } },
+                    OwnershipFilter::All => { // All items pass this filter
+                    },
+                }
+            }
+
+            // Check spawned filter
+            if let Option::Some(spawned_only) = filters.spawned_only {
+                if spawned_only && !*gear.spawned {
+                    return false;
+                }
+            }
+
+            true
+        }
+
+        fn _sort_gear_items(
+            self: @ContractState, items: Array<GearDetailsComplete>, sort_params: SortParams,
+        ) -> Array<@GearDetailsComplete> {
+            // For simplicity, we'll implement a basic bubble sort
+            // In production, you'd want a more efficient sorting algorithm
+            let mut sorted_items = array![];
+            let len = sorted_items.len();
+
+            if len <= 1 {
+                return sorted_items;
+            }
+
+            // Convert to a mutable array for sorting
+            let mut i = 0;
+            while i < len - 1 {
+                let mut j = 0;
+                while j < len - 1 - i {
+                    let should_swap = self
+                        ._should_swap_items(items.at(j), items.at(j + 1), sort_params);
+
+                    if should_swap {
+                        // In Cairo, we can't easily swap array elements in place
+                        // So we'll rebuild the array with swapped elements
+                        // This is inefficient but works for the implementation
+                        let mut new_array = array![];
+                        let mut k = 0;
+                        while k < items.len() {
+                            if k == j {
+                                new_array.append(items.at(j + 1));
+                            } else if k == j + 1 {
+                                new_array.append(items.at(j));
+                            } else {
+                                new_array.append(items.at(k));
+                            }
+                            k += 1;
+                        };
+                        sorted_items = new_array;
+                    }
+                    j += 1;
+                };
+                i += 1;
+            };
+
+            sorted_items
+        }
+
+        fn _should_swap_items(
+            self: @ContractState,
+            item1: @GearDetailsComplete,
+            item2: @GearDetailsComplete,
+            sort_params: SortParams,
+        ) -> bool {
+            let value1 = self._get_sort_value(item1, sort_params.sort_by);
+            let value2 = self._get_sort_value(item2, sort_params.sort_by);
+
+            if sort_params.ascending {
+                value1 > value2
+            } else {
+                value1 < value2
+            }
+        }
+
+        fn _get_sort_value(
+            self: @ContractState, item: @GearDetailsComplete, sort_field: SortField,
+        ) -> u256 {
+            match sort_field {
+                SortField::Level => Into::<u64, u256>::into(*item.gear.upgrade_level),
+                SortField::Damage => Into::<u64, u256>::into(*item.calculated_stats.damage),
+                SortField::Defense => Into::<u64, u256>::into(*item.calculated_stats.defense),
+                SortField::XpRequired => *item.gear.min_xp_needed,
+                SortField::AssetId => *item.gear.asset_id,
+            }
+        }
+
+        fn _paginate_items(
+            self: @ContractState, items: Array<GearDetailsComplete>, offset: u32, limit: u32,
+        ) -> Array<GearDetailsComplete> {
+            let mut paginated = array![];
+            let total_items = items.len();
+
+            if offset >= total_items {
+                return paginated; // Return empty array if offset is beyond items
+            }
+
+            let start_index = offset;
+            let end_index = if start_index + limit > total_items {
+                total_items
+            } else {
+                start_index + limit
+            };
+
+            let mut i = start_index;
+            while i < end_index {
+                paginated.append(items.at(i).clone());
+                i += 1;
+            };
+
+            paginated
         }
 
         fn _calculate_combined_effects(
             self: @ContractState, player: @Player,
         ) -> CombinedEquipmentEffects {
-            // This would iterate through equipped items and calculate combined effects
-            // Simplified implementation
+            let world = self.world_default();
+
+            let mut total_damage = 0_u64;
+            let mut total_defense = 0_u64;
+            let mut total_weight = 0_u64;
+            let mut equipped_slots: Array<EquipmentSlotInfo> = array![];
+            let mut empty_slots: Array<felt252> = array![];
+            let mut equipped_gear_types: Array<GearType> = array![];
+
+            // Process head slot (helmet)
+            if *player.body.head != 0 {
+                let gear: Gear = world.read_model(*player.body.head);
+                if gear.id != 0 {
+                    let stats = self._calculate_gear_stats(@gear);
+                    total_defense += stats.defense;
+                    total_weight += stats.weight;
+
+                    let slot_info = EquipmentSlotInfo {
+                        slot_type: 'HEAD', equipped_item: Option::Some(gear), is_empty: false,
+                    };
+                    equipped_slots.append(slot_info);
+                    equipped_gear_types.append(parse_id(gear.asset_id));
+                } else {
+                    empty_slots.append('HEAD');
+                }
+            } else {
+                empty_slots.append('HEAD');
+            }
+
+            // Process hands (gloves)
+            if player.body.hands.len() > 0 {
+                let mut hands_equipped = false;
+                let mut i = 0;
+                while i < player.body.hands.len() {
+                    let gear_id = *player.body.hands.at(i);
+                    if gear_id != 0 {
+                        let gear: Gear = world.read_model(gear_id);
+                        if gear.id != 0 {
+                            let stats = self._calculate_gear_stats(@gear);
+                            total_defense += stats.defense;
+                            total_weight += stats.weight;
+
+                            if !hands_equipped {
+                                let slot_info = EquipmentSlotInfo {
+                                    slot_type: 'HANDS',
+                                    equipped_item: Option::Some(gear),
+                                    is_empty: false,
+                                };
+                                equipped_slots.append(slot_info);
+                                equipped_gear_types.append(parse_id(gear.asset_id));
+                                hands_equipped = true;
+                            }
+                        }
+                    }
+                    i += 1;
+                };
+                if !hands_equipped {
+                    empty_slots.append('HANDS');
+                }
+            } else {
+                empty_slots.append('HANDS');
+            }
+
+            // Process weapons (left and right hand)
+            let mut weapon_equipped = false;
+
+            // Left hand weapons
+            let mut i = 0;
+            while i < player.body.left_hand.len() {
+                let gear_id = *player.body.left_hand.at(i);
+                if gear_id != 0 {
+                    let gear: Gear = world.read_model(gear_id);
+                    if gear.id != 0 {
+                        let stats = self._calculate_gear_stats(@gear);
+                        total_damage += stats.damage;
+                        total_weight += stats.weight;
+
+                        if !weapon_equipped {
+                            let slot_info = EquipmentSlotInfo {
+                                slot_type: 'WEAPON',
+                                equipped_item: Option::Some(gear),
+                                is_empty: false,
+                            };
+                            equipped_slots.append(slot_info);
+                            equipped_gear_types.append(parse_id(gear.asset_id));
+                            weapon_equipped = true;
+                        }
+                    }
+                }
+                i += 1;
+            };
+
+            // Right hand weapons
+            let mut i = 0;
+            while i < player.body.right_hand.len() {
+                let gear_id = *player.body.right_hand.at(i);
+                if gear_id != 0 {
+                    let gear: Gear = world.read_model(gear_id);
+                    if gear.id != 0 {
+                        let stats = self._calculate_gear_stats(@gear);
+                        total_damage += stats.damage;
+                        total_weight += stats.weight;
+
+                        if !weapon_equipped {
+                            let slot_info = EquipmentSlotInfo {
+                                slot_type: 'WEAPON',
+                                equipped_item: Option::Some(gear),
+                                is_empty: false,
+                            };
+                            equipped_slots.append(slot_info);
+                            equipped_gear_types.append(parse_id(gear.asset_id));
+                            weapon_equipped = true;
+                        }
+                    }
+                }
+                i += 1;
+            };
+
+            if !weapon_equipped {
+                empty_slots.append('WEAPON');
+            }
+
+            // Process upper torso (chest armor)
+            let mut chest_equipped = false;
+            let mut i = 0;
+            while i < player.body.upper_torso.len() {
+                let gear_id = *player.body.upper_torso.at(i);
+                if gear_id != 0 {
+                    let gear: Gear = world.read_model(gear_id);
+                    if gear.id != 0 {
+                        let stats = self._calculate_gear_stats(@gear);
+                        total_defense += stats.defense;
+                        total_weight += stats.weight;
+
+                        if !chest_equipped {
+                            let slot_info = EquipmentSlotInfo {
+                                slot_type: 'CHEST',
+                                equipped_item: Option::Some(gear),
+                                is_empty: false,
+                            };
+                            equipped_slots.append(slot_info);
+                            equipped_gear_types.append(parse_id(gear.asset_id));
+                            chest_equipped = true;
+                        }
+                    }
+                }
+                i += 1;
+            };
+            if !chest_equipped {
+                empty_slots.append('CHEST');
+            }
+
+            // Process lower torso (leg armor)
+            let mut legs_equipped = false;
+            let mut i = 0;
+            while i < player.body.lower_torso.len() {
+                let gear_id = *player.body.lower_torso.at(i);
+                if gear_id != 0 {
+                    let gear: Gear = world.read_model(gear_id);
+                    if gear.id != 0 {
+                        let stats = self._calculate_gear_stats(@gear);
+                        total_defense += stats.defense;
+                        total_weight += stats.weight;
+
+                        if !legs_equipped {
+                            let slot_info = EquipmentSlotInfo {
+                                slot_type: 'LEGS',
+                                equipped_item: Option::Some(gear),
+                                is_empty: false,
+                            };
+                            equipped_slots.append(slot_info);
+                            equipped_gear_types.append(parse_id(gear.asset_id));
+                            legs_equipped = true;
+                        }
+                    }
+                }
+                i += 1;
+            };
+            if !legs_equipped {
+                empty_slots.append('LEGS');
+            }
+
+            // Process feet (boots)
+            let mut feet_equipped = false;
+            let mut i = 0;
+            while i < player.body.feet.len() {
+                let gear_id = *player.body.feet.at(i);
+                if gear_id != 0 {
+                    let gear: Gear = world.read_model(gear_id);
+                    if gear.id != 0 {
+                        let stats = self._calculate_gear_stats(@gear);
+                        total_defense += stats.defense;
+                        total_weight += stats.weight;
+
+                        if !feet_equipped {
+                            let slot_info = EquipmentSlotInfo {
+                                slot_type: 'FEET',
+                                equipped_item: Option::Some(gear),
+                                is_empty: false,
+                            };
+                            equipped_slots.append(slot_info);
+                            equipped_gear_types.append(parse_id(gear.asset_id));
+                            feet_equipped = true;
+                        }
+                    }
+                }
+                i += 1;
+            };
+            if !feet_equipped {
+                empty_slots.append('FEET');
+            }
+
+            // Process off-body items (pets/drones)
+            let mut companion_equipped = false;
+            let mut i = 0;
+            while i < player.body.off_body.len() {
+                let gear_id = *player.body.off_body.at(i);
+                if gear_id != 0 {
+                    let gear: Gear = world.read_model(gear_id);
+                    if gear.id != 0 {
+                        let stats = self._calculate_gear_stats(@gear);
+                        // Pets/drones might provide different bonuses
+                        total_damage += stats.loyalty / 10; // Convert loyalty to damage bonus
+
+                        if !companion_equipped {
+                            let slot_info = EquipmentSlotInfo {
+                                slot_type: 'COMPANION',
+                                equipped_item: Option::Some(gear),
+                                is_empty: false,
+                            };
+                            equipped_slots.append(slot_info);
+                            equipped_gear_types.append(parse_id(gear.asset_id));
+                            companion_equipped = true;
+                        }
+                    }
+                }
+                i += 1;
+            };
+            if !companion_equipped {
+                empty_slots.append('COMPANION');
+            }
+
+            // Calculate set bonuses
+            let set_bonuses = self._calculate_set_bonuses(@equipped_gear_types);
 
             CombinedEquipmentEffects {
-                total_damage: 0,
-                total_defense: 0,
-                total_weight: 0,
-                equipped_slots: array![],
-                empty_slots: array![],
-                set_bonuses: array![],
+                total_damage, total_defense, total_weight, equipped_slots, empty_slots, set_bonuses,
             }
+        }
+
+        fn _calculate_set_bonuses(
+            self: @ContractState, equipped_types: @Array<GearType>,
+        ) -> Array<(felt252, u64)> {
+            let mut bonuses: Array<(felt252, u64)> = array![];
+
+            // Count different gear types
+            let mut armor_count = 0_u32;
+            let mut weapon_count = 0_u32;
+            let mut companion_count = 0_u32;
+
+            let mut i = 0;
+            while i < equipped_types.len() {
+                let gear_type = *equipped_types.at(i);
+                match gear_type {
+                    GearType::Helmet | GearType::ChestArmor | GearType::LegArmor | GearType::Boots |
+                    GearType::Gloves | GearType::Shield => { armor_count += 1; },
+                    GearType::Weapon | GearType::BluntWeapon | GearType::Sword | GearType::Bow |
+                    GearType::Firearm | GearType::Polearm | GearType::HeavyFirearms |
+                    GearType::Explosives => { weapon_count += 1; },
+                    GearType::Pet | GearType::Drone => { companion_count += 1; },
+                    _ => {},
+                }
+                i += 1;
+            };
+
+            // Armor set bonuses
+            if armor_count >= 2 {
+                bonuses.append(('ARMOR_PAIR', 10)); // +10% defense for 2+ armor pieces
+            }
+            if armor_count >= 3 {
+                bonuses.append(('ARMOR_SET', 25)); // +25% defense for 3+ armor pieces
+            }
+            if armor_count >= 5 {
+                bonuses.append(('FULL_ARMOR', 50)); // +50% defense for full armor set
+            }
+
+            // Weapon bonuses
+            if weapon_count >= 2 {
+                bonuses.append(('DUAL_WIELD', 20)); // +20% damage for dual wielding
+            }
+
+            // Companion bonuses
+            if companion_count >= 1 {
+                bonuses.append(('COMPANION', 15)); // +15% overall effectiveness
+            }
+
+            // Mixed set bonuses
+            if armor_count >= 2 && weapon_count >= 1 {
+                bonuses.append(('WARRIOR_SET', 30)); // +30% combat effectiveness
+            }
+
+            bonuses
         }
 
 
