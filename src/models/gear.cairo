@@ -231,3 +231,127 @@ impl Felt252TryIntoGearType of TryInto<felt252, GearType> {
         }
     }
 }
+
+// ===== READ OPERATION DATA STRUCTURES =====
+
+// Comprehensive gear details structure
+#[derive(Drop, Serde)]
+pub struct GearDetailsComplete {
+    pub gear: Gear,
+    pub calculated_stats: GearStatsCalculated,
+    pub upgrade_info: Option<UpgradeInfo>,
+    pub ownership_status: OwnershipStatus,
+}
+
+// Calculated stats based on current upgrade level
+#[derive(Drop, Serde)]
+pub struct GearStatsCalculated {
+    pub damage: u64,
+    pub range: u64,
+    pub accuracy: u64,
+    pub fire_rate: u64,
+    pub defense: u64,
+    pub durability: u64,
+    pub weight: u64,
+    pub speed: u64,
+    pub armor: u64,
+    pub fuel_capacity: u64,
+    pub loyalty: u64,
+    pub intelligence: u64,
+    pub agility: u64,
+}
+
+// Upgrade information
+#[derive(Drop, Serde)]
+pub struct UpgradeInfo {
+    pub current_level: u64,
+    pub max_level: u64,
+    pub can_upgrade: bool,
+    pub next_level_cost: Option<UpgradeCost>,
+    pub success_rate: Option<u8>,
+    pub next_level_stats: Option<GearStatsCalculated>,
+    pub total_upgrade_cost: Option<Array<(u256, u256)>> // (token_id, total_amount)
+}
+
+// Ownership and availability status
+#[derive(Drop, Serde)]
+pub struct OwnershipStatus {
+    pub is_owned: bool,
+    pub owner: ContractAddress,
+    pub is_spawned: bool,
+    pub is_available_for_pickup: bool,
+    pub is_equipped: bool,
+    pub meets_xp_requirement: bool,
+}
+
+// Filtering parameters
+#[derive(Drop, Serde)]
+pub struct GearFilters {
+    pub gear_types: Option<Array<GearType>>,
+    pub min_level: Option<u64>,
+    pub max_level: Option<u64>,
+    pub ownership_filter: Option<OwnershipFilter>,
+    pub min_xp_required: Option<u256>,
+    pub max_xp_required: Option<u256>,
+    pub spawned_only: Option<bool>,
+}
+
+// Ownership filtering options
+#[derive(Drop, Serde, PartialEq)]
+pub enum OwnershipFilter {
+    Owned,
+    NotOwned,
+    Available,
+    Equipped,
+    All,
+}
+
+// Pagination parameters
+#[derive(Drop, Serde)]
+pub struct PaginationParams {
+    pub offset: u32,
+    pub limit: u32,
+}
+
+// Sort parameters
+#[derive(Drop, Serde)]
+pub struct SortParams {
+    pub sort_by: SortField,
+    pub ascending: bool,
+}
+
+#[derive(Drop, Serde, PartialEq)]
+pub enum SortField {
+    Level,
+    Damage,
+    Defense,
+    XpRequired,
+    AssetId,
+}
+
+// Paginated result structure
+#[derive(Drop, Serde)]
+pub struct PaginatedGearResult {
+    pub items: Array<GearDetailsComplete>,
+    pub total_count: u32,
+    pub has_more: bool,
+}
+
+// Equipment slot information
+#[derive(Drop, Serde)]
+pub struct EquipmentSlotInfo {
+    pub slot_type: felt252,
+    pub equipped_item: Option<Gear>,
+    pub is_empty: bool,
+}
+
+// Combined equipment effects
+#[derive(Drop, Serde)]
+pub struct CombinedEquipmentEffects {
+    pub total_damage: u64,
+    pub total_defense: u64,
+    pub total_weight: u64,
+    pub equipped_slots: Array<EquipmentSlotInfo>,
+    pub empty_slots: Array<felt252>,
+    pub set_bonuses: Array<(felt252, u64)> // (bonus_type, bonus_value)
+}

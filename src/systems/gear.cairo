@@ -2,15 +2,23 @@
 pub mod GearActions {
     use crate::interfaces::gear::IGear;
     use dojo::event::EventStorage;
-    use super::super::super::models::gear::GearTrait;
+    use crate::models::gear::GearTrait;
+    use crate::helpers::gear::*;
+    use crate::helpers::session_validation::*;
     use starknet::{ContractAddress, get_block_timestamp, get_contract_address, get_caller_address};
-    use crate::models::player::PlayerTrait;
+    use crate::models::player::{Player, PlayerTrait};
     use dojo::world::WorldStorage;
     use dojo::model::ModelStorage;
     use crate::models::gear::{
         Gear, GearProperties, GearType, UpgradeCost, UpgradeSuccessRate, UpgradeMaterial,
-        GearLevelStats, UpgradeConfigState,
+        GearLevelStats, UpgradeConfigState, GearDetailsComplete, GearStatsCalculated, UpgradeInfo,
+        OwnershipStatus, GearFilters, OwnershipFilter, PaginationParams, SortParams,
+        PaginatedGearResult, CombinedEquipmentEffects,
     };
+    use crate::models::weapon_stats::WeaponStats;
+    use crate::models::armor_stats::Armor;
+    use crate::models::vehicle_stats::VehicleStats;
+    use crate::models::pet_stats::PetStats;
     use crate::models::core::Operator;
     use crate::helpers::base::generate_id;
     use crate::helpers::base::ContractAddressDefault;
@@ -18,6 +26,7 @@ pub mod GearActions {
     use crate::models::session::SessionKey;
     use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
     use origami_random::dice::{Dice, DiceTrait};
+    use core::num::traits::Zero;
 
     const GEAR: felt252 = 'GEAR';
     // A constant key for our singleton UpgradeConfigState model
@@ -299,7 +308,7 @@ pub mod GearActions {
 
             let mut world = self.world_default();
             let caller = get_caller_address();
-            let mut player: crate::models::player::Player = world.read_model(caller);
+            let mut player: Player = world.read_model(caller);
 
             // Initialize player
             player.init('default');
@@ -428,6 +437,273 @@ pub mod GearActions {
             }
 
             world.write_model(@config_state);
+        }
+
+        // ===== READ OPERATIONS IMPLEMENTATION =====
+
+        fn get_gear_details_complete(
+            ref self: ContractState, item_id: u256, session_id: felt252,
+        ) -> Option<GearDetailsComplete> {
+            if !self.validate_session_for_read_action(session_id) {
+                return Option::None;
+            }
+
+            let world = self.world_default();
+            let gear: Gear = world.read_model(item_id);
+
+            if gear.id == 0 {
+                return Option::None;
+            }
+
+            let calculated_stats = self._calculate_gear_stats(@gear);
+            let upgrade_info = self._get_upgrade_info(@gear);
+            let ownership_status = self._get_ownership_status(@gear);
+
+            Option::Some(
+                GearDetailsComplete { gear, calculated_stats, upgrade_info, ownership_status },
+            )
+        }
+
+        fn get_gear_details_batch(
+            ref self: ContractState, item_ids: Array<u256>, session_id: felt252,
+        ) -> Array<Option<GearDetailsComplete>> {
+            if !self.validate_session_for_read_action(session_id) {
+                return array![];
+            }
+
+            let mut results = array![];
+            let mut i = 0;
+            while i < item_ids.len() {
+                let item_id = *item_ids.at(i);
+                let details = self.get_gear_details_complete(item_id, session_id);
+                results.append(details);
+                i += 1;
+            };
+            results
+        }
+
+        fn get_calculated_stats(
+            ref self: ContractState, item_id: u256, session_id: felt252,
+        ) -> Option<GearStatsCalculated> {
+            if !self.validate_session_for_read_action(session_id) {
+                return Option::None;
+            }
+
+            let world = self.world_default();
+            let gear: Gear = world.read_model(item_id);
+
+            if gear.id == 0 {
+                return Option::None;
+            }
+
+            Option::Some(self._calculate_gear_stats(@gear))
+        }
+
+        fn get_upgrade_preview(
+            ref self: ContractState, item_id: u256, target_level: u64, session_id: felt252,
+        ) -> Option<UpgradeInfo> {
+            if !self.validate_session_for_read_action(session_id) {
+                return Option::None;
+            }
+
+            let world = self.world_default();
+            let gear: Gear = world.read_model(item_id);
+
+            if gear.id == 0 || target_level > gear.max_upgrade_level {
+                return Option::None;
+            }
+
+            Option::Some(self._calculate_upgrade_preview(@gear, target_level))
+        }
+
+        fn get_player_inventory(
+            ref self: ContractState,
+            player: ContractAddress,
+            filters: Option<GearFilters>,
+            pagination: Option<PaginationParams>,
+            sort: Option<SortParams>,
+            session_id: felt252,
+        ) -> PaginatedGearResult {
+            if !self.validate_session_for_read_action(session_id) {
+                return PaginatedGearResult { items: array![], total_count: 0, has_more: false };
+            }
+
+            // This is a simplified implementation
+            // In a real system, you'd need to iterate through all gear items
+            // and filter by ownership, then apply additional filters
+            self._get_filtered_gear(filters, pagination, sort, Option::Some(player))
+        }
+
+        fn get_equipped_gear(
+            ref self: ContractState, player: ContractAddress, session_id: felt252,
+        ) -> CombinedEquipmentEffects {
+            if !self.validate_session_for_read_action(session_id) {
+                return CombinedEquipmentEffects {
+                    total_damage: 0,
+                    total_defense: 0,
+                    total_weight: 0,
+                    equipped_slots: array![],
+                    empty_slots: array![],
+                    set_bonuses: array![],
+                };
+            }
+
+            let world = self.world_default();
+            let player_data: Player = world.read_model(player);
+
+            self._calculate_combined_effects(@player_data)
+        }
+
+        fn get_available_items(
+            ref self: ContractState,
+            player_xp: u256,
+            filters: Option<GearFilters>,
+            pagination: Option<PaginationParams>,
+            session_id: felt252,
+        ) -> PaginatedGearResult {
+            if !self.validate_session_for_read_action(session_id) {
+                return PaginatedGearResult { items: array![], total_count: 0, has_more: false };
+            }
+
+            // Filter for spawned items that meet XP requirements
+            let mut available_filters = match filters {
+                Option::Some(f) => f,
+                Option::None => GearFilters {
+                    gear_types: Option::None,
+                    min_level: Option::None,
+                    max_level: Option::None,
+                    ownership_filter: Option::Some(OwnershipFilter::Available),
+                    min_xp_required: Option::None,
+                    max_xp_required: Option::Some(player_xp),
+                    spawned_only: Option::Some(true),
+                },
+            };
+
+            available_filters.spawned_only = Option::Some(true);
+            available_filters.max_xp_required = Option::Some(player_xp);
+
+            self
+                ._get_filtered_gear(
+                    Option::Some(available_filters), pagination, Option::None, Option::None,
+                )
+        }
+
+        fn calculate_upgrade_costs(
+            ref self: ContractState, item_id: u256, target_level: u64, session_id: felt252,
+        ) -> Option<Array<(u256, u256)>> {
+            if !self.validate_session_for_read_action(session_id) {
+                return Option::None;
+            }
+
+            let world = self.world_default();
+            let gear: Gear = world.read_model(item_id);
+
+            if gear.id == 0
+                || target_level > gear.max_upgrade_level
+                || target_level <= gear.upgrade_level {
+                return Option::None;
+            }
+
+            Option::Some(self._calculate_total_upgrade_costs(@gear, target_level))
+        }
+
+        fn check_upgrade_feasibility(
+            ref self: ContractState,
+            item_id: u256,
+            target_level: u64,
+            player_materials: Array<(u256, u256)>,
+            session_id: felt252,
+        ) -> (bool, Array<(u256, u256)>) {
+            if !self.validate_session_for_read_action(session_id) {
+                return (false, array![]);
+            }
+
+            let result = match self.calculate_upgrade_costs(item_id, target_level, session_id) {
+                Option::Some(costs) => self._check_material_availability(costs, player_materials),
+                Option::None => (false, array![]),
+            };
+
+            result
+        }
+
+        fn filter_gear_by_type(
+            ref self: ContractState,
+            gear_type: GearType,
+            pagination: Option<PaginationParams>,
+            session_id: felt252,
+        ) -> PaginatedGearResult {
+            if !self.validate_session_for_read_action(session_id) {
+                return PaginatedGearResult { items: array![], total_count: 0, has_more: false };
+            }
+
+            let filters = GearFilters {
+                gear_types: Option::Some(array![gear_type]),
+                min_level: Option::None,
+                max_level: Option::None,
+                ownership_filter: Option::None,
+                min_xp_required: Option::None,
+                max_xp_required: Option::None,
+                spawned_only: Option::None,
+            };
+
+            self._get_filtered_gear(Option::Some(filters), pagination, Option::None, Option::None)
+        }
+
+        fn search_gear_by_criteria(
+            ref self: ContractState,
+            filters: GearFilters,
+            pagination: Option<PaginationParams>,
+            sort: Option<SortParams>,
+            session_id: felt252,
+        ) -> PaginatedGearResult {
+            if !self.validate_session_for_read_action(session_id) {
+                return PaginatedGearResult { items: array![], total_count: 0, has_more: false };
+            }
+
+            self._get_filtered_gear(Option::Some(filters), pagination, sort, Option::None)
+        }
+
+        fn compare_gear_stats(
+            ref self: ContractState, item_ids: Array<u256>, session_id: felt252,
+        ) -> Array<GearStatsCalculated> {
+            if !self.validate_session_for_read_action(session_id) {
+                return array![];
+            }
+
+            let world = self.world_default();
+            let mut stats_array = array![];
+            let mut i = 0;
+
+            while i < item_ids.len() {
+                let item_id = *item_ids.at(i);
+                let gear: Gear = world.read_model(item_id);
+
+                if gear.id != 0 {
+                    let stats = self._calculate_gear_stats(@gear);
+                    stats_array.append(stats);
+                }
+                i += 1;
+            };
+
+            stats_array
+        }
+
+        fn get_gear_summary(
+            ref self: ContractState, item_id: u256, session_id: felt252,
+        ) -> Option<(Gear, u64, u64, u64)> {
+            if !self.validate_session_for_read_action(session_id) {
+                return Option::None;
+            }
+
+            let world = self.world_default();
+            let gear: Gear = world.read_model(item_id);
+
+            if gear.id == 0 {
+                return Option::None;
+            }
+
+            let stats = self._calculate_gear_stats(@gear);
+            Option::Some((gear, stats.damage, stats.defense, stats.weight))
         }
     }
 
@@ -572,6 +848,311 @@ pub mod GearActions {
         // or use an external function in the helper trait that returns an enum
         }
 
+        fn validate_session_for_read_action(ref self: ContractState, session_id: felt252) -> bool {
+            // Basic validation - session_id must not be zero
+            if session_id == 0 {
+                return false;
+            }
+
+            let caller = get_caller_address();
+            let world = self.world_default();
+            let session: SessionKey = world.read_model((session_id, caller));
+
+            // Use helper function for validation (read-only, so no transaction increment)
+            validate_session_parameters(session, caller)
+        }
+
+        fn _calculate_gear_stats(self: @ContractState, gear: @Gear) -> GearStatsCalculated {
+            let mut world = self.world_default();
+            // Get level-based stats
+            let level_stats: GearLevelStats = world
+                .read_model((*gear.asset_id, *gear.upgrade_level));
+
+            // Initialize with level stats
+            let mut calculated = GearStatsCalculated {
+                damage: level_stats.damage,
+                range: level_stats.range,
+                accuracy: level_stats.accuracy,
+                fire_rate: level_stats.fire_rate,
+                defense: level_stats.defense,
+                durability: level_stats.durability,
+                weight: level_stats.weight,
+                speed: 0,
+                armor: 0,
+                fuel_capacity: 0,
+                loyalty: 0,
+                intelligence: 0,
+                agility: 0,
+            };
+
+            // Get gear type and load specific stats
+            let gear_type = parse_id(*gear.asset_id);
+
+            match gear_type {
+                GearType::Weapon | GearType::BluntWeapon | GearType::Sword | GearType::Bow |
+                GearType::Firearm | GearType::Polearm | GearType::HeavyFirearms |
+                GearType::Explosives => {
+                    let weapon_stats: WeaponStats = world.read_model(*gear.asset_id);
+                    // Apply upgrade multipliers to weapon stats
+                    calculated
+                        .damage = self
+                        ._apply_upgrade_multiplier(weapon_stats.damage, *gear.upgrade_level);
+                    calculated
+                        .range = self
+                        ._apply_upgrade_multiplier(weapon_stats.range, *gear.upgrade_level);
+                    calculated
+                        .accuracy = self
+                        ._apply_upgrade_multiplier(weapon_stats.accuracy, *gear.upgrade_level);
+                    calculated
+                        .fire_rate = self
+                        ._apply_upgrade_multiplier(weapon_stats.fire_rate, *gear.upgrade_level);
+                },
+                GearType::Helmet | GearType::ChestArmor | GearType::LegArmor | GearType::Boots |
+                GearType::Gloves |
+                GearType::Shield => {
+                    let armor_stats: Armor = world.read_model(*gear.asset_id);
+                    // Apply upgrade multipliers to armor stats
+                    calculated
+                        .defense = self
+                        ._apply_upgrade_multiplier(armor_stats.defense, *gear.upgrade_level);
+                    calculated
+                        .durability = self
+                        ._apply_upgrade_multiplier(armor_stats.durability, *gear.upgrade_level);
+                    calculated.weight = armor_stats.weight; // Weight doesn't scale with upgrades
+                },
+                GearType::Vehicle => {
+                    let vehicle_stats: VehicleStats = world.read_model(*gear.asset_id);
+                    // Apply upgrade multipliers to vehicle stats
+                    calculated
+                        .speed = self
+                        ._apply_upgrade_multiplier(vehicle_stats.speed, *gear.upgrade_level);
+                    calculated
+                        .armor = self
+                        ._apply_upgrade_multiplier(vehicle_stats.armor, *gear.upgrade_level);
+                    calculated
+                        .fuel_capacity = self
+                        ._apply_upgrade_multiplier(
+                            vehicle_stats.fuel_capacity, *gear.upgrade_level,
+                        );
+                },
+                GearType::Pet |
+                GearType::Drone => {
+                    let pet_stats: PetStats = world.read_model(*gear.asset_id);
+                    // Apply upgrade multipliers to pet stats
+                    calculated
+                        .loyalty = self
+                        ._apply_upgrade_multiplier(pet_stats.loyalty, *gear.upgrade_level);
+                    calculated
+                        .intelligence = self
+                        ._apply_upgrade_multiplier(pet_stats.intelligence, *gear.upgrade_level);
+                    calculated
+                        .agility = self
+                        ._apply_upgrade_multiplier(pet_stats.agility, *gear.upgrade_level);
+                },
+                _ => {// Default case - use level stats as-is
+                },
+            }
+
+            calculated
+        }
+
+        fn _apply_upgrade_multiplier(self: @ContractState, base_stat: u64, level: u64) -> u64 {
+            // Base multiplier starts at 100% (level 0) and increases by 10% per level
+            let multiplier = 100 + (level * 10);
+            (base_stat * multiplier) / 100
+        }
+
+        fn _get_upgrade_info(self: @ContractState, gear: @Gear) -> Option<UpgradeInfo> {
+            if gear.upgrade_level >= gear.max_upgrade_level {
+                return Option::Some(
+                    UpgradeInfo {
+                        current_level: *gear.upgrade_level,
+                        max_level: *gear.max_upgrade_level,
+                        can_upgrade: false,
+                        next_level_cost: Option::None,
+                        success_rate: Option::None,
+                        next_level_stats: Option::None,
+                        total_upgrade_cost: Option::None,
+                    },
+                );
+            }
+
+            let gear_type = parse_id(*gear.asset_id);
+            let next_level = *gear.upgrade_level + 1;
+            let mut world = self.world_default();
+
+            let upgrade_cost: UpgradeCost = world.read_model((gear_type, *gear.upgrade_level));
+            let success_rate: UpgradeSuccessRate = world
+                .read_model((gear_type, *gear.upgrade_level));
+
+            // Calculate next level stats
+            let next_level_gear = Gear {
+                id: *gear.id,
+                item_type: *gear.item_type,
+                asset_id: *gear.asset_id,
+                variation_ref: *gear.variation_ref,
+                total_count: *gear.total_count,
+                in_action: *gear.in_action,
+                upgrade_level: next_level,
+                owner: *gear.owner,
+                max_upgrade_level: *gear.max_upgrade_level,
+                min_xp_needed: *gear.min_xp_needed,
+                spawned: *gear.spawned,
+            };
+
+            let next_stats = self._calculate_gear_stats(@next_level_gear);
+
+            Option::Some(
+                UpgradeInfo {
+                    current_level: *gear.upgrade_level,
+                    max_level: *gear.max_upgrade_level,
+                    can_upgrade: true,
+                    next_level_cost: Option::Some(upgrade_cost),
+                    success_rate: Option::Some(success_rate.rate),
+                    next_level_stats: Option::Some(next_stats),
+                    total_upgrade_cost: Option::None // Would need to calculate for multiple levels
+                },
+            )
+        }
+
+        fn _get_ownership_status(self: @ContractState, gear: @Gear) -> OwnershipStatus {
+            let caller = get_caller_address();
+
+            OwnershipStatus {
+                is_owned: !gear.owner.is_zero(),
+                owner: *gear.owner,
+                is_spawned: *gear.spawned,
+                is_available_for_pickup: *gear.spawned && gear.owner.is_zero(),
+                is_equipped: *gear.in_action,
+                meets_xp_requirement: true // Would need player XP to calculate properly
+            }
+        }
+
+        fn _calculate_upgrade_preview(
+            self: @ContractState, gear: @Gear, target_level: u64,
+        ) -> UpgradeInfo {
+            let gear_type = parse_id(*gear.asset_id);
+            let total_costs = self._calculate_total_upgrade_costs(gear, target_level);
+
+            // Create gear at target level for stats calculation
+            let target_gear = Gear {
+                id: *gear.id,
+                item_type: *gear.item_type,
+                asset_id: *gear.asset_id,
+                variation_ref: *gear.variation_ref,
+                total_count: *gear.total_count,
+                in_action: *gear.in_action,
+                upgrade_level: target_level,
+                owner: *gear.owner,
+                max_upgrade_level: *gear.max_upgrade_level,
+                min_xp_needed: *gear.min_xp_needed,
+                spawned: *gear.spawned,
+            };
+
+            let target_stats = self._calculate_gear_stats(@target_gear);
+
+            UpgradeInfo {
+                current_level: *gear.upgrade_level,
+                max_level: *gear.max_upgrade_level,
+                can_upgrade: target_level <= *gear.max_upgrade_level,
+                next_level_cost: Option::None,
+                success_rate: Option::None,
+                next_level_stats: Option::Some(target_stats),
+                total_upgrade_cost: Option::Some(total_costs),
+            }
+        }
+
+        fn _calculate_total_upgrade_costs(
+            self: @ContractState, gear: @Gear, target_level: u64,
+        ) -> Array<(u256, u256)> {
+            let mut total_costs: Array<(u256, u256)> = array![];
+            let gear_type = parse_id(*gear.asset_id);
+            let mut world = self.world_default();
+
+            let mut current_level = *gear.upgrade_level;
+            while current_level < target_level {
+                let upgrade_cost: UpgradeCost = world.read_model((gear_type, current_level));
+
+                // Add materials to total costs
+                let mut i = 0;
+                while i < upgrade_cost.materials.len() {
+                    let material = *upgrade_cost.materials.at(i);
+                    // This is simplified - in reality you'd need to aggregate costs properly
+                    total_costs.append((material.token_id, material.amount));
+                    i += 1;
+                };
+
+                current_level += 1;
+            };
+
+            total_costs
+        }
+
+        fn _check_material_availability(
+            self: @ContractState,
+            required_materials: Array<(u256, u256)>,
+            available_materials: Array<(u256, u256)>,
+        ) -> (bool, Array<(u256, u256)>) {
+            let mut missing_materials: Array<(u256, u256)> = array![];
+            let mut feasible = true;
+
+            let mut i = 0;
+            while i < required_materials.len() {
+                let (token_id, required_amount) = *required_materials.at(i);
+                let mut available_amount = 0;
+
+                // Find available amount for this token
+                let mut j = 0;
+                while j < available_materials.len() {
+                    let (avail_token_id, avail_amount) = *available_materials.at(j);
+                    if avail_token_id == token_id {
+                        available_amount = avail_amount;
+                        break;
+                    }
+                    j += 1;
+                };
+
+                if available_amount < required_amount {
+                    feasible = false;
+                    missing_materials.append((token_id, required_amount - available_amount));
+                }
+
+                i += 1;
+            };
+
+            (feasible, missing_materials)
+        }
+
+        fn _get_filtered_gear(
+            self: @ContractState,
+            filters: Option<GearFilters>,
+            pagination: Option<PaginationParams>,
+            sort: Option<SortParams>,
+            owner_filter: Option<ContractAddress>,
+        ) -> PaginatedGearResult {
+            // This is a simplified implementation
+            // In a real system, you'd need to iterate through all gear items
+            // and apply filters, sorting, and pagination
+
+            PaginatedGearResult { items: array![], total_count: 0, has_more: false }
+        }
+
+        fn _calculate_combined_effects(
+            self: @ContractState, player: @Player,
+        ) -> CombinedEquipmentEffects {
+            // This would iterate through equipped items and calculate combined effects
+            // Simplified implementation
+
+            CombinedEquipmentEffects {
+                total_damage: 0,
+                total_defense: 0,
+                total_weight: 0,
+                equipped_slots: array![],
+                empty_slots: array![],
+                set_bonuses: array![],
+            }
+        }
+
 
         fn _initialize_gear_assets(ref self: ContractState, ref world: WorldStorage) {
             // Weapons - using ERC1155 token IDs as primary keys
@@ -590,7 +1171,7 @@ pub mod GearActions {
         // world.write_model(@weapon_1_gear);
 
             // // Weapon 1 stats
-        // let weapon_1_stats = crate::models::weapon_stats::WeaponStats {
+        // let weapon_1_stats = WeaponStats {
         //     asset_id: weapon_1_id,
         //     damage: 45,
         //     range: 100,
@@ -617,7 +1198,7 @@ pub mod GearActions {
         // world.write_model(@weapon_2_gear);
 
             // // Weapon 2 stats
-        // let weapon_2_stats = crate::models::weapon_stats::WeaponStats {
+        // let weapon_2_stats = WeaponStats {
         //     asset_id: weapon_2_id,
         //     damage: 60,
         //     range: 80,
