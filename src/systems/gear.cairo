@@ -12,7 +12,7 @@ pub mod GearActions {
     use dojo::model::ModelStorage;
     use crate::models::gear::{
         Gear, GearProperties, GearType, UpgradeCost, UpgradeSuccessRate, UpgradeMaterial,
-        GearLevelStats, UpgradeConfigState,
+        GearLevelStats, UpgradeConfigState, GearTypeCounter,
     };
     use crate::models::core::Operator;
     use crate::helpers::base::generate_id;
@@ -438,12 +438,12 @@ pub mod GearActions {
         // random gear  item genrator
         fn random_gear_generator(ref self: ContractState, session_id: felt252) -> Gear {
             self.validate_session_for_action(session_id);
-
+            let caller = get_caller_address();
             let mut world = self.world_default();
+
             let gear_type = random_geartype();
             let item_type: felt252 = Into::<GearType, felt252>::into(gear_type);
-            let asset_id: u256 = generate_id(item_type, ref world);
-            let owner: ContractAddress = contract_address_const::<0>();
+            let asset_id: u256 = self.generate_next_gear_id(gear_type);
             let max_upgrade_level: u64 = get_max_upgrade_level(gear_type);
             let min_xp_needed: u256 = get_min_xp_needed(gear_type);
 
@@ -455,7 +455,7 @@ pub mod GearActions {
                 total_count: 1,
                 in_action: false,
                 upgrade_level: 0,
-                owner,
+                owner: caller,
                 max_upgrade_level,
                 min_xp_needed,
                 spawned: true,
@@ -605,6 +605,21 @@ pub mod GearActions {
             ref self: ContractState, item_id: u256,
         ) { // this function should probably return an enum
         // or use an external function in the helper trait that returns an enum
+        }
+
+        fn generate_next_gear_id(ref self: ContractState, gear_type: GearType) -> u256 {
+            let mut world = self.world_default();
+
+            let gear_type_code: u256 = gear_type.into();
+            let gear_type_id = gear_type_code.high;
+
+            let counter_entry: GearTypeCounter = world.read_model(gear_type_id);
+            let next_serial = counter_entry.count + 1;
+
+            let updated_counter = GearTypeCounter { gear_type_id, count: next_serial };
+            world.write_model(@updated_counter);
+
+            u256 { high: gear_type_id, low: next_serial }
         }
 
 
