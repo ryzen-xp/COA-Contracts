@@ -13,6 +13,10 @@ pub mod erc1155 {
     pub mod erc1155;
 }
 
+pub mod gear {
+    pub mod GearActions;
+}
+
 pub mod models {
     pub mod player;
     pub mod core;
@@ -59,6 +63,7 @@ pub mod interfaces {
 pub mod helpers {
     pub mod base;
     pub mod gear;
+    pub mod body;
     pub mod session_validation;
 }
 
@@ -77,6 +82,8 @@ pub mod test {
     pub mod pick_item_test;
     pub mod player_session_integration_test;
     pub mod session_helper_test;
+    pub mod test_exchange_items;
+    pub mod test_unequip;
     pub mod upgrade_gear_test;
 }
 
