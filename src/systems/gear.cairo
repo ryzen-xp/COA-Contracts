@@ -946,7 +946,7 @@ pub mod GearActions {
                         .agility = self
                         ._apply_upgrade_multiplier(pet_stats.agility, *gear.upgrade_level);
                 },
-                _ => {// Default case - use level stats as-is
+                _ => { // Default case - use level stats as-is
                 },
             }
 
