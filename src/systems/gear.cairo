@@ -528,9 +528,6 @@ pub mod GearActions {
                 return PaginatedGearResult { items: array![], total_count: 0, has_more: false };
             }
 
-            // This is a simplified implementation
-            // In a real system, you'd need to iterate through all gear items
-            // and filter by ownership, then apply additional filters
             self._get_filtered_gear(filters, pagination, sort, Option::Some(player))
         }
 
