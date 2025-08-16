@@ -143,9 +143,7 @@ pub trait IGear<TContractState> {
     fn get_gear_summary(
         ref self: TContractState, item_id: u256, session_id: felt252,
     ) -> Option<(Gear, u64, u64, u64)>; // (gear, total_damage, total_defense, total_weight)
-
 }
 /// TODO: Implement gear levels: Rare, Mythical, etc... these levels would determine its base stats
 /// and the max upgradeable stats.
-
 
