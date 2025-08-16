@@ -13,7 +13,7 @@ pub mod GearActions {
         Gear, GearProperties, GearType, UpgradeCost, UpgradeSuccessRate, UpgradeMaterial,
         GearLevelStats, UpgradeConfigState, GearDetailsComplete, GearStatsCalculated, UpgradeInfo,
         OwnershipStatus, GearFilters, OwnershipFilter, PaginationParams, SortParams, SortField,
-        PaginatedGearResult, CombinedEquipmentEffects, EquipmentSlotInfo,
+        PaginatedGearResult, CombinedEquipmentEffects, EquipmentSlotInfo,GearTypeCounter
     };
 
     use crate::models::weapon_stats::WeaponStats;
