@@ -80,12 +80,60 @@ pub struct FactionStats {
     pub speed_multiplier: u256,
 }
 
+// Damage accumulator for combo system
+#[derive(Drop, Copy, Serde)]
+pub struct DamageAccumulator {
+    pub target_id: u256,
+    pub accumulated_damage: u256,
+    pub hit_count: u32,
+    pub combo_multiplier: u256, // 100 = 1.0x, 150 = 1.5x, etc.
+    pub last_hit_time: u64,
+    pub is_active: bool,
+}
+
 #[derive(Copy, Drop, Serde)]
 #[dojo::event]
 pub struct PlayerInitialized {
     #[key]
     pub player_id: ContractAddress,
     pub faction: felt252,
+}
+
+// New combat session events for optimization
+#[derive(Copy, Drop, Serde)]
+#[dojo::event]
+pub struct CombatSessionStarted {
+    #[key]
+    pub session_id: felt252,
+    #[key]
+    pub player_address: ContractAddress,
+    pub expected_actions: u32,
+    pub session_expires_at: u64,
+}
+
+#[derive(Copy, Drop, Serde)]
+#[dojo::event]
+pub struct BatchDamageProcessed {
+    #[key]
+    pub session_id: felt252,
+    #[key]
+    pub attacker: ContractAddress,
+    pub total_targets: u32,
+    pub total_damage: u256,
+    pub actions_processed: u32,
+}
+
+#[derive(Copy, Drop, Serde)]
+#[dojo::event]
+pub struct CombatSessionEnded {
+    #[key]
+    pub session_id: felt252,
+    #[key]
+    pub player_address: ContractAddress,
+    pub total_actions_executed: u32,
+    pub total_damage_dealt: u256,
+    pub session_duration: u64,
+    pub gas_saved_percentage: u32,
 }
 
 #[generate_trait]

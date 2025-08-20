@@ -232,3 +232,107 @@ pub fn validate_session_for_action_centralized(
     // Session is valid and doesn't need renewal
     (true, session)
 }
+
+// Combat session validation for batch operations
+// Validates session once for entire combat sequence
+pub fn validate_combat_session(
+    session: SessionKey, caller: ContractAddress, expected_actions: u32, current_time: u64,
+) -> (bool, SessionKey) {
+    // First, validate the session using our helper
+    if !validate_session_parameters_with_time(session, caller, current_time) {
+        return (false, session);
+    }
+
+    // Check if session has enough transactions for the entire combat sequence
+    let transactions_needed = expected_actions;
+    let available_transactions = session.max_transactions - session.used_transactions;
+
+    if available_transactions < transactions_needed {
+        // Auto-renew if needed to accommodate the batch
+        let mut renewed_session = session;
+        renewed_session.expires_at = current_time + DEFAULT_RENEWAL_DURATION;
+        renewed_session.last_used = current_time;
+        renewed_session.max_transactions = MAX_TRANSACTIONS_PER_SESSION; // Use max for combat
+        renewed_session.used_transactions = 0; // Reset transaction count
+
+        return (true, renewed_session);
+    }
+
+    // Session is valid and has enough transactions
+    (true, session)
+}
+
+// Batch session usage tracking - accumulates transaction count for batch operations
+pub fn consume_combat_session_transactions(
+    mut session: SessionKey, actions_executed: u32, current_time: u64,
+) -> SessionKey {
+    // Update transaction count for all actions in the batch
+    session.used_transactions += actions_executed;
+    session.last_used = current_time;
+
+    session
+}
+
+// Check if session should be cached for combat operations
+pub fn should_cache_combat_session(session: SessionKey, expected_actions: u32) -> bool {
+    // Cache if we're doing a significant number of actions (3+ actions)
+    // and session has sufficient time remaining (more than 10 minutes)
+    let time_remaining = calculate_session_time_remaining(session);
+    expected_actions >= 3 && time_remaining > 600 // 10 minutes
+}
+
+// Combat session cache structure to reduce storage reads
+#[derive(Drop, Copy, Serde)]
+pub struct CombatSessionCache {
+    pub session: SessionKey,
+    pub cached_at: u64,
+    pub actions_remaining: u32,
+    pub is_active: bool,
+}
+
+// Create a new combat session cache
+pub fn create_combat_session_cache(
+    session: SessionKey, current_time: u64, expected_actions: u32,
+) -> CombatSessionCache {
+    CombatSessionCache {
+        session, cached_at: current_time, actions_remaining: expected_actions, is_active: true,
+    }
+}
+
+// Validate cached combat session without storage read
+pub fn validate_cached_combat_session(cache: CombatSessionCache, current_time: u64) -> bool {
+    // Check if cache is still valid (within 5 minutes of caching)
+    let cache_age = current_time - cache.cached_at;
+    if cache_age > 300 { // 5 minutes
+        return false;
+    }
+
+    // Check if session hasn't expired
+    if current_time >= cache.session.expires_at {
+        return false;
+    }
+
+    // Check if we still have actions remaining
+    cache.actions_remaining > 0 && cache.is_active
+}
+
+// Update combat session cache after action execution
+pub fn update_combat_session_cache(
+    mut cache: CombatSessionCache, actions_consumed: u32, current_time: u64,
+) -> CombatSessionCache {
+    if actions_consumed >= cache.actions_remaining {
+        cache.actions_remaining = 0;
+        cache.is_active = false;
+    } else {
+        cache.actions_remaining -= actions_consumed;
+    }
+
+    cache
+}
+
+// Invalidate combat session cache
+pub fn invalidate_combat_session_cache(mut cache: CombatSessionCache) -> CombatSessionCache {
+    cache.is_active = false;
+    cache.actions_remaining = 0;
+    cache
+}

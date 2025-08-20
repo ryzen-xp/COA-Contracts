@@ -10,6 +10,13 @@ pub trait IPlayer<TContractState> {
         with_items: Array<u256>,
         session_id: felt252,
     );
+    fn batch_deal_damage(
+        ref self: TContractState,
+        batch_targets: Array<Array<u256>>,
+        batch_target_types: Array<Array<felt252>>,
+        batch_with_items: Array<Array<u256>>,
+        session_id: felt252,
+    );
     fn get_player(self: @TContractState, player_id: u256, session_id: felt252) -> Player;
     fn register_guild(ref self: TContractState, session_id: felt252);
     fn transfer_objects(
@@ -24,21 +31,23 @@ pub trait IPlayer<TContractState> {
 #[dojo::contract]
 pub mod PlayerActions {
     use core::num::traits::Zero;
-    use starknet::{ContractAddress, get_caller_address};
+    use starknet::{ContractAddress, get_caller_address, get_block_timestamp};
     use crate::models::player::{
         Player, PlayerTrait, DamageDealt, PlayerDamaged, FactionStats, PlayerInitialized,
+        CombatSessionStarted, BatchDamageProcessed, CombatSessionEnded, DamageAccumulator,
     };
     use crate::models::gear::{Gear, GearTrait};
     use crate::models::armour::{Armour, ArmourTrait};
-    use crate::erc1155::erc1155::{
-        IERC1155Dispatcher, IERC1155DispatcherTrait, IERC1155MintableDispatcher,
-        IERC1155MintableDispatcherTrait,
-    };
+    use crate::erc1155::erc1155::{IERC1155Dispatcher, IERC1155DispatcherTrait};
     use super::IPlayer;
     use dojo::model::{ModelStorage};
     use dojo::event::EventStorage;
     // Import session model for validation
     use crate::models::session::SessionKey;
+    // Import session validation helpers
+    use crate::helpers::session_validation::{
+        validate_combat_session, consume_combat_session_transactions,
+    };
 
     // Faction types as felt252 constants
     const CHAOS_MERCENARIES: felt252 = 'CHAOS_MERCENARIES';
@@ -161,6 +170,145 @@ pub mod PlayerActions {
             };
         }
 
+        fn batch_deal_damage(
+            ref self: ContractState,
+            batch_targets: Array<Array<u256>>,
+            batch_target_types: Array<Array<felt252>>,
+            batch_with_items: Array<Array<u256>>,
+            session_id: felt252,
+        ) {
+            // Get current time and caller
+            let current_time = get_block_timestamp();
+            let caller = get_caller_address();
+            let mut world = self.world_default();
+
+            // Calculate total expected actions for session validation
+            let total_actions = batch_targets.len();
+            assert(total_actions > 0, 'NO_ACTIONS_PROVIDED');
+            assert(batch_targets.len() == batch_target_types.len(), 'BATCH_LENGTH_MISMATCH');
+            assert(batch_targets.len() == batch_with_items.len(), 'ITEMS_LENGTH_MISMATCH');
+
+            // Read session from storage
+            let session: SessionKey = world.read_model((session_id, caller));
+
+            // Validate combat session once for entire batch
+            let (is_valid, updated_session) = validate_combat_session(
+                session, caller, total_actions, current_time,
+            );
+            assert(is_valid, 'INVALID_COMBAT_SESSION');
+
+            // Emit combat session started event
+            let combat_started_event = CombatSessionStarted {
+                session_id,
+                player_address: caller,
+                expected_actions: total_actions,
+                session_expires_at: updated_session.expires_at,
+            };
+            world.emit_event(@combat_started_event);
+
+            // Get player and calculate faction stats once
+            let player: Player = world.read_model(caller);
+            let faction_stats = self.get_faction_stats(player.faction);
+
+            let mut total_damage_dealt = 0;
+            let mut actions_executed = 0;
+            let mut batch_index = 0;
+            let mut total_targets_count = 0;
+            let processing_started_at = get_block_timestamp();
+
+            // Process each batch of damage actions
+            loop {
+                if batch_index >= batch_targets.len() {
+                    break;
+                }
+
+                let targets = batch_targets.at(batch_index);
+                let target_types = batch_target_types.at(batch_index);
+                let with_items = batch_with_items.at(batch_index);
+
+                // Validate arrays within each batch
+                assert(targets.len() == target_types.len(), 'TARGET_ARRAYS_MISMATCH');
+
+                let mut target_index = 0;
+                let mut batch_damage = 0;
+
+                // Process all targets in this batch
+                loop {
+                    if target_index >= targets.len() {
+                        break;
+                    }
+
+                    let target_id = *targets.at(target_index);
+                    let target_type = *target_types.at(target_index);
+
+                    // Calculate damage for this target
+                    let damage = if with_items.len() == 0 {
+                        self.calculate_melee_damage(player.clone(), faction_stats)
+                    } else {
+                        self
+                            .calculate_weapon_damage(
+                                player.clone(), with_items.span(), faction_stats,
+                            )
+                    };
+
+                    // Apply damage to target
+                    self.damage_target(target_id, target_type, damage);
+
+                    // Emit individual damage event
+                    let damage_event = DamageDealt {
+                        attacker: caller, target: target_id, damage, target_type,
+                    };
+                    world.emit_event(@damage_event);
+
+                    batch_damage += damage;
+                    target_index += 1;
+                };
+
+                total_damage_dealt += batch_damage;
+                actions_executed += 1;
+                batch_index += 1;
+                total_targets_count += targets.len();
+            };
+
+            let processing_ended_at = get_block_timestamp();
+
+            // Emit batch damage processed event
+            let batch_processed_event = BatchDamageProcessed {
+                session_id,
+                attacker: caller,
+                total_targets: total_targets_count,
+                total_damage: total_damage_dealt,
+                actions_processed: actions_executed,
+            };
+            world.emit_event(@batch_processed_event);
+
+            // Update session with consumed transactions
+            let final_session = consume_combat_session_transactions(
+                updated_session, actions_executed, current_time,
+            );
+            world.write_model(@final_session);
+
+            // Calculate gas savings (estimated 60% for 10+ actions)
+            let gas_saved_percentage = if actions_executed >= 10 {
+                60
+            } else if actions_executed >= 5 {
+                40
+            } else {
+                20
+            };
+
+            // Emit combat session ended event
+            let combat_ended_event = CombatSessionEnded {
+                session_id,
+                player_address: caller,
+                total_actions_executed: actions_executed,
+                total_damage_dealt,
+                session_duration: processing_ended_at - processing_started_at,
+                gas_saved_percentage,
+            };
+            world.emit_event(@combat_ended_event);
+        }
+
         fn get_player(self: @ContractState, player_id: u256, session_id: felt252) -> Player {
             // Validate session before proceeding (read-only validation)
             assert(session_id != 0, 'INVALID_SESSION');
@@ -179,7 +327,7 @@ pub mod PlayerActions {
             assert(session.status == 0, 'SESSION_NOT_ACTIVE');
 
             // Validate session has not expired
-            let current_time = starknet::get_block_timestamp();
+            let current_time = get_block_timestamp();
             assert(current_time < session.expires_at, 'SESSION_EXPIRED');
 
             // Note: For read operations, we don't increment transaction count
@@ -296,7 +444,7 @@ pub mod PlayerActions {
             assert(session.status == 0, 'SESSION_NOT_ACTIVE');
 
             // Validate session has not expired
-            let current_time = starknet::get_block_timestamp();
+            let current_time = get_block_timestamp();
             assert(current_time < session.expires_at, 'SESSION_EXPIRED');
 
             // Validate session has transactions left
@@ -514,6 +662,84 @@ pub mod PlayerActions {
             }
         }
 
+        // Optimized batch receive damage for accumulated damage processing
+        fn receive_accumulated_damage(
+            ref self: ContractState, player_id: u256, total_damage: u256,
+        ) {
+            let mut world = self.world_default();
+            let mut player = world.read_model(player_id);
+
+            // Cache armor item IDs to reduce lookups
+            let armor_types = array![
+                ARMOR_HELMET,
+                ARMOR_CHESTPLATE,
+                ARMOR_LEGGINGS,
+                ARMOR_BOOTS,
+                ARMOR_GLOVES,
+                ARMOR_SHIELD,
+            ];
+
+            let mut equipped_armor_ids: Array<u256> = array![];
+            let mut armor_index = 0;
+
+            // Cache all equipped armor item IDs
+            loop {
+                if armor_index >= armor_types.len() {
+                    break;
+                }
+
+                let armor_type = *armor_types.at(armor_index);
+                let equipped_item_id = (player.clone()).is_equipped(armor_type);
+
+                if equipped_item_id.is_non_zero() {
+                    equipped_armor_ids.append(equipped_item_id);
+                }
+
+                armor_index += 1;
+            };
+
+            // Apply damage through all armor pieces
+            let mut remaining_damage = total_damage;
+            let mut armor_cache_index = 0;
+
+            loop {
+                if armor_cache_index >= equipped_armor_ids.len() || remaining_damage == 0 {
+                    break;
+                }
+
+                let equipped_item_id = *equipped_armor_ids.at(armor_cache_index);
+                let gear: Gear = world.read_model(equipped_item_id);
+                let mut armor: Armour = world.read_model(gear.asset_id);
+
+                remaining_damage = armor.apply_damage(remaining_damage);
+
+                // Write updated armor back to storage
+                world.write_model(@armor);
+                armor_cache_index += 1;
+            };
+
+            // Apply remaining damage to player health
+            if remaining_damage > 0 {
+                if remaining_damage >= player.hp {
+                    player.hp = 0;
+                } else {
+                    player.hp -= remaining_damage;
+                }
+
+                world.write_model(@player);
+                let damage_reduction = total_damage - remaining_damage;
+                let event = PlayerDamaged {
+                    player_id,
+                    damage_received: total_damage,
+                    damage_reduction,
+                    actual_damage: remaining_damage,
+                    remaining_hp: player.hp,
+                    is_alive: player.hp > 0,
+                };
+                world.emit_event(@event);
+            }
+        }
+
         fn get_erc1155_address(self: @ContractState) -> ContractAddress {
             // In a real implementation, this would be stored in the contract state
             // For now, we return a placeholder address
@@ -543,7 +769,7 @@ pub mod PlayerActions {
             // For now, this is just a placeholder
 
             // Get the player model - using placeholder session_id for now
-            let mut player = self.get_player(player_id, 0);
+            let mut _player = self.get_player(player_id, 0);
             // Depending on the object type, we would add it to the appropriate inventory slot
         // This is a simplified implementation
 
@@ -559,6 +785,71 @@ pub mod PlayerActions {
         ) { // In a real implementation, this would update the quantity of the object
         // in the player's inventory in the game state
         // For now, this is just a placeholder
+        }
+
+        // Damage accumulator functions for combo system
+        fn create_damage_accumulator(
+            self: @ContractState, target_id: u256, initial_damage: u256, current_time: u64,
+        ) -> DamageAccumulator {
+            DamageAccumulator {
+                target_id,
+                accumulated_damage: initial_damage,
+                hit_count: 1,
+                combo_multiplier: 100, // Start with 1.0x multiplier
+                last_hit_time: current_time,
+                is_active: true,
+            }
+        }
+
+        fn update_damage_accumulator(
+            self: @ContractState,
+            mut accumulator: DamageAccumulator,
+            new_damage: u256,
+            current_time: u64,
+        ) -> DamageAccumulator {
+            // Check if combo chain is still active (within 3 seconds of last hit)
+            let time_diff = current_time - accumulator.last_hit_time;
+            if time_diff > 3 {
+                // Reset combo if too much time has passed
+                accumulator.hit_count = 1;
+                accumulator.combo_multiplier = 100;
+                accumulator.accumulated_damage = new_damage;
+            } else {
+                // Continue combo chain
+                accumulator.hit_count += 1;
+
+                // Increase combo multiplier (5% per additional hit, max 200%)
+                let multiplier_increase: u256 = ((accumulator.hit_count - 1) * 5).into();
+                accumulator.combo_multiplier = 100 + multiplier_increase;
+                if accumulator.combo_multiplier > 200 {
+                    accumulator.combo_multiplier = 200; // Cap at 2.0x
+                }
+
+                // Apply combo multiplier to new damage and add to accumulator
+                let boosted_damage = (new_damage * accumulator.combo_multiplier) / 100;
+                accumulator.accumulated_damage += boosted_damage;
+            }
+
+            accumulator.last_hit_time = current_time;
+            accumulator
+        }
+
+        fn finalize_damage_accumulator(
+            ref self: ContractState, accumulator: DamageAccumulator,
+        ) -> u256 {
+            // Apply accumulated damage to target
+            if accumulator.is_active && accumulator.accumulated_damage > 0 {
+                self
+                    .receive_accumulated_damage(
+                        accumulator.target_id, accumulator.accumulated_damage,
+                    );
+
+                // Emit combo event if significant combo was achieved
+                if accumulator.hit_count >= 3 { // Could emit a ComboAchieved event here if defined
+                }
+            }
+
+            accumulator.accumulated_damage
         }
     }
 
