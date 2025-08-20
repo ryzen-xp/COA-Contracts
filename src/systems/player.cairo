@@ -38,9 +38,7 @@ pub mod PlayerActions {
     };
     use crate::models::gear::{Gear, GearTrait};
     use crate::models::armour::{Armour, ArmourTrait};
-    use crate::erc1155::erc1155::{
-        IERC1155Dispatcher, IERC1155DispatcherTrait,
-    };
+    use crate::erc1155::erc1155::{IERC1155Dispatcher, IERC1155DispatcherTrait};
     use super::IPlayer;
     use dojo::model::{ModelStorage};
     use dojo::event::EventStorage;
@@ -707,7 +705,7 @@ pub mod PlayerActions {
                 let equipped_item_id = *equipped_armor_ids.at(armor_cache_index);
                 let gear: Gear = world.read_model(equipped_item_id);
                 let mut armor: Armour = world.read_model(gear.asset_id);
-                
+
                 remaining_damage = armor.apply_damage(remaining_damage);
 
                 // Write updated armor back to storage
