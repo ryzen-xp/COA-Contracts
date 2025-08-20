@@ -213,6 +213,8 @@ pub mod PlayerActions {
             let mut total_damage_dealt = 0;
             let mut actions_executed = 0;
             let mut batch_index = 0;
+            let mut total_targets_count = 0;
+            let processing_started_at = get_block_timestamp();
 
             // Process each batch of damage actions
             loop {
@@ -265,13 +267,16 @@ pub mod PlayerActions {
                 total_damage_dealt += batch_damage;
                 actions_executed += 1;
                 batch_index += 1;
+                total_targets_count += targets.len();
             };
+
+            let processing_ended_at = get_block_timestamp();
 
             // Emit batch damage processed event
             let batch_processed_event = BatchDamageProcessed {
                 session_id,
                 attacker: caller,
-                total_targets: total_actions,
+                total_targets: total_targets_count,
                 total_damage: total_damage_dealt,
                 actions_processed: actions_executed,
             };
@@ -298,7 +303,7 @@ pub mod PlayerActions {
                 player_address: caller,
                 total_actions_executed: actions_executed,
                 total_damage_dealt,
-                session_duration: current_time - updated_session.last_used,
+                session_duration: processing_ended_at - processing_started_at,
                 gas_saved_percentage,
             };
             world.emit_event(@combat_ended_event);
