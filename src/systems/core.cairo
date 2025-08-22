@@ -24,18 +24,19 @@ pub trait ICore<TContractState> {
 #[dojo::contract]
 pub mod CoreActions {
     use super::super::super::erc1155::erc1155::IERC1155MintableDispatcherTrait;
-    use starknet::{ContractAddress, get_caller_address};
+    use starknet::{ContractAddress, get_caller_address, contract_address_const};
     use dojo::model::ModelStorage;
     use crate::models::core::{Contract, Operator, GearSpawned, ItemPicked};
     use crate::models::gear::*;
     use crate::systems::gear::GearActions::GearActionsImpl;
     use core::array::ArrayTrait;
     use crate::erc1155::erc1155::IERC1155MintableDispatcher;
+    use crate::erc1155::erc1155::{IERC1155Dispatcher, IERC1155DispatcherTrait};
     use dojo::event::{EventStorage};
     use coa::systems::gear::*;
     use dojo::world::WorldStorage;
-    use coa::helpers::gear::*;
-    use coa::models::player::*;
+    use coa::helpers::gear::{parse_id, random_geartype, get_max_upgrade_level, get_min_xp_needed};
+    use coa::models::player::{Player, PlayerTrait};
     use core::num::traits::Zero;
     use core::traits::Into;
 
@@ -89,12 +90,14 @@ pub mod CoreActions {
             while amount != 0 {
                 let mut gear: Gear = self.random_gear_generator();
 
-                assert(!gear.spawned, 'Gear already spawned');
+                assert(!gear.spawned, 'Gear_already_spawned');
                 gear.spawned = true;
+                gear.owner = contract_address_const::<0>();
                 world.write_model(@gear);
+
                 items.append(gear.id);
                 amount -= 1;
-
+                // mint to warehouse
                 erc1155_dispatcher.mint(contract.warehouse, gear.id, 1, array![].span());
             };
             let event = GearSpawned { admin: caller, items };
@@ -128,18 +131,17 @@ pub mod CoreActions {
             let gear = Gear {
                 id: item_id,
                 item_type,
-                asset_id: item_id.low.into(),
+                asset_id: item_id,
                 variation_ref: 0,
                 total_count: 1,
                 in_action: false,
                 upgrade_level: 0,
-                owner: caller,
+                owner: contract_address_const::<0>(),
                 max_upgrade_level,
                 min_xp_needed,
-                spawned: true,
+                spawned: false,
             };
 
-            world.write_model(@gear);
             gear
         }
 
@@ -150,12 +152,11 @@ pub mod CoreActions {
             let contract: Contract = world.read_model(COA_CONTRACTS);
             let mut player: Player = world.read_model(caller);
 
-            // Initialize player
             player.init('default');
 
             let mut successfully_picked: Array<u256> = array![];
 
-            let has_vehicle = player.has_vehicle_equipped();
+            let mut has_vehicle = player.has_vehicle_equipped();
 
             let mut i = 0;
             while i < item_ids.len() {
@@ -164,7 +165,6 @@ pub mod CoreActions {
 
                 assert(gear.is_available_for_pickup(), 'Item not available');
 
-                // Check if player meets XP requirement
                 if player.xp < gear.min_xp_needed {
                     i += 1;
                     continue;
@@ -174,32 +174,33 @@ pub mod CoreActions {
                 let mut mint_item = false;
 
                 if has_vehicle {
-                    // If player has vehicle, mint all items directly to inventory
+                    // if player has vehicle, mint all items directly to inventory !!!!!!!!!!!!
                     mint_item = true;
                 } else {
                     if player.is_equippable(item_id) {
                         PlayerTrait::equip(ref player, item_id);
                         equipped = true;
                         mint_item = true;
-                    } else {
-                        if player.has_free_inventory_slot() {
-                            mint_item = true;
-                        }
+                    } else if player.has_free_inventory_slot() {
+                        mint_item = true;
                     }
                 }
 
                 if mint_item {
-                    // Mint the item to player's inventory
-                    player.mint(item_id, contract.erc1155, 1);
+                    // Transfer the pre-minted item from warehouse to the player
 
-                    // Update gear ownership and spawned state
+                    let erc1155 = IERC1155Dispatcher { contract_address: contract.erc1155 };
+                    erc1155
+                        .safe_transfer_from(
+                            contract.warehouse, caller, item_id, 1, array![].span(),
+                        );
+
                     gear.transfer_to(caller);
                     world.write_model(@gear);
 
                     // Add to successfully picked array
                     successfully_picked.append(item_id);
 
-                    // Emit itempicked event
                     world
                         .emit_event(
                             @ItemPicked {
@@ -212,6 +213,11 @@ pub mod CoreActions {
                 }
 
                 i += 1;
+
+                // if we just equipped a vehicle, enable hands-free pickup
+                if equipped && parse_id(item_id) == GearType::Vehicle {
+                    has_vehicle = true;
+                }
             };
 
             // Update Player state
