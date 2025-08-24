@@ -123,10 +123,10 @@ pub struct UpgradeConfigState {
 
 #[dojo::model]
 #[derive(Drop, Copy, Serde, Default)]
-pub struct GearTypeCounter {
+pub struct GearCounter {
     #[key]
-    pub gear_type_id: u128,
-    pub count: u128,
+    pub id: u128,
+    pub counter: u128,
 }
 
 
