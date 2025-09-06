@@ -351,10 +351,10 @@ pub mod Errors {
 }
 
 // Helper function to get the high 128 bits from a u256
-fn get_high(val: u256) -> u128 {
+pub fn get_high(val: u256) -> u128 {
     val.high
 }
 
-fn get_low(val: u256) -> u128 {
+pub fn get_low(val: u256) -> u128 {
     val.low
 }
