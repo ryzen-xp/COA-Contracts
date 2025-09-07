@@ -169,7 +169,13 @@ pub fn get_min_xp_needed(gear_type: GearType) -> u256 {
 
 // Helper function to generate random GearDetails
 pub fn random_gear_details() -> GearDetails {
-    let gear_type = random_geartype();
+    let mut gear_type = random_geartype();
+
+    if gear_type == GearType::None {
+        // Fallback to a sane default; alternatively re-roll with a different seed.
+        gear_type = GearType::Weapon;
+    }
+
     let min_xp_needed = get_min_xp_needed(gear_type);
     let max_upgrade_level = get_max_upgrade_level(gear_type);
 

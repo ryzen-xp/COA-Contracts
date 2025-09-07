@@ -106,7 +106,7 @@ pub mod CoreActions {
                     owner: contract_address_const::<0>(),
                     max_upgrade_level: details.max_upgrade_level,
                     min_xp_needed: details.min_xp_needed,
-                    spawned: true,
+                    spawned: false,
                 };
 
                 assert(!gear.spawned, 'Gear already spawned');
