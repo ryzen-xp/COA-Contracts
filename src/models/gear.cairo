@@ -58,6 +58,22 @@ pub enum GearType {
     Drone // 0x800001
 }
 
+#[derive(Drop, Copy, Serde)]
+pub struct GearDetails {
+    // Type of gear (e.g., Weapon, Helmet, Vehicle)
+    pub gear_type: GearType,
+    // Minimum XP required to use the gear
+    pub min_xp_needed: u256,
+    // Base damage value for the gear (0 for non-damaging items)
+    pub base_damage: u64,
+    // Maximum upgrade level for the gear
+    pub max_upgrade_level: u64,
+    // Initial total count for fungible items (default 1 for non-fungible)
+    pub total_count: u64,
+    // Reference to variation (e.g., specific model like "Iron Sword")
+    pub variation_ref: u256,
+}
+
 #[derive(Drop, Copy, Serde, Default)]
 pub struct GearProperties {
     asset_id: u256,
@@ -163,6 +179,52 @@ pub impl GearImpl of GearTrait {
     fn transfer_to(ref self: Gear, new_owner: ContractAddress) {
         self.owner = new_owner;
         self.spawned = false;
+    }
+}
+
+// Implementation of GearDetails with validation and default behavior
+#[generate_trait]
+pub impl GearDetailsImpl of GearDetailsTrait {
+    // Creates a new GearDetails instance with validation
+    fn new(
+        gear_type: GearType,
+        min_xp_needed: u256,
+        base_damage: u64,
+        max_upgrade_level: u64,
+        total_count: u64,
+        variation_ref: u256,
+    ) -> GearDetails {
+        // Validate inputs
+        assert(gear_type != GearType::None, 'Gear type cannot be None');
+        assert(min_xp_needed >= 0, 'Min XP cannot be negative');
+        assert(base_damage <= 1000, 'Base damage exceeds max (1000)');
+        assert(max_upgrade_level > 0, 'Max upgrade level must be > 0');
+        assert(total_count > 0, 'Total count must be > 0');
+
+        GearDetails {
+            gear_type, min_xp_needed, base_damage, max_upgrade_level, total_count, variation_ref,
+        }
+    }
+
+    // Validates the GearDetails instance
+    fn validate(self: @GearDetails) -> bool {
+        *self.gear_type != GearType::None
+            && *self.min_xp_needed >= 0
+            && *self.base_damage <= 1000
+            && *self.max_upgrade_level > 0
+            && *self.total_count > 0
+    }
+
+    // Creates a default GearDetails for testing or fallback
+    fn default() -> GearDetails {
+        GearDetails {
+            gear_type: GearType::Weapon,
+            min_xp_needed: 5,
+            base_damage: 10,
+            max_upgrade_level: 1,
+            total_count: 1,
+            variation_ref: 0,
+        }
     }
 }
 
@@ -423,5 +485,59 @@ impl OptionArrayTupleImpl of Clone<Option<Array<(u256, u256)>>> {
             Option::Some(arr) => Option::Some(arr.clone()),
             Option::None => Option::None,
         }
+    }
+}
+
+// Tests for GearDetails struct
+#[cfg(test)]
+mod tests {
+    use super::{GearDetails, GearDetailsImpl, GearType};
+
+    #[test]
+    fn test_valid_gear_details() {
+        let gear = GearDetailsImpl::new(GearType::Sword, 30, 50, 10, 1, 1);
+        assert!(gear.validate(), "Valid gear should pass validation");
+        assert(gear.gear_type == GearType::Sword, 'Gear type mismatch');
+        assert(gear.min_xp_needed == 30, 'Min XP mismatch');
+        assert(gear.base_damage == 50, 'Base damage mismatch');
+        assert(gear.max_upgrade_level == 10, 'Max upgrade level mismatch');
+        assert(gear.total_count == 1, 'Total count mismatch');
+        assert(gear.variation_ref == 1, 'Variation ref mismatch');
+    }
+
+    #[test]
+    #[should_panic(expected: ('Gear type cannot be None',))]
+    fn test_invalid_gear_type() {
+        GearDetailsImpl::new(GearType::None, 5, 10, 1, 1, 0);
+    }
+
+    #[test]
+    #[should_panic(expected: ('Base damage exceeds max (1000)',))]
+    fn test_invalid_base_damage() {
+        GearDetailsImpl::new(GearType::Weapon, 5, 1001, 1, 1, 0);
+    }
+
+    #[test]
+    #[should_panic(expected: ('Max upgrade level must be > 0',))]
+    fn test_invalid_max_upgrade_level() {
+        GearDetailsImpl::new(GearType::Weapon, 5, 10, 0, 1, 0);
+    }
+
+    #[test]
+    #[should_panic(expected: ('Total count must be > 0',))]
+    fn test_invalid_total_count() {
+        GearDetailsImpl::new(GearType::Weapon, 5, 10, 1, 0, 0);
+    }
+
+    #[test]
+    fn test_default_gear_details() {
+        let gear = GearDetailsImpl::default();
+        assert(gear.validate(), 'Default gear should be valid');
+        assert(gear.gear_type == GearType::Weapon, 'Default gear type mismatch');
+        assert(gear.min_xp_needed == 5, 'Default min XP mismatch');
+        assert(gear.base_damage == 10, 'Default base damage mismatch');
+        assert!(gear.max_upgrade_level == 1, "Default max upgrade level mismatch");
+        assert(gear.total_count == 1, 'Default total count mismatch');
+        assert(gear.variation_ref == 0, 'Default variation ref mismatch');
     }
 }
