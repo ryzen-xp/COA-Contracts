@@ -172,18 +172,13 @@ pub fn random_gear_details() -> GearDetails {
     let gear_type = random_geartype();
     let min_xp_needed = get_min_xp_needed(gear_type);
     let max_upgrade_level = get_max_upgrade_level(gear_type);
-    
+
     // Generate random base damage (between 10 and 100 for simplicity)
     let mut dice = DiceTrait::new(90, 'DAMAGE_SEED');
     let base_damage: u64 = (10 + dice.roll()).into();
 
     GearDetails {
-        gear_type,
-        min_xp_needed,
-        base_damage,
-        max_upgrade_level,
-        total_count: 1,
-        variation_ref: 0,
+        gear_type, min_xp_needed, base_damage, max_upgrade_level, total_count: 1, variation_ref: 0,
     }
 }
 
@@ -191,7 +186,7 @@ pub fn random_gear_details() -> GearDetails {
 pub fn validate_gear_details_array(details: @Array<GearDetails>) -> bool {
     let mut i = 0;
     let mut valid = true;
-    
+
     while i < details.len() {
         let gear_details = *details.at(i);
         if !gear_details.validate() {
@@ -200,7 +195,7 @@ pub fn validate_gear_details_array(details: @Array<GearDetails>) -> bool {
         }
         i += 1;
     };
-    
+
     valid
 }
 
@@ -208,19 +203,22 @@ pub fn validate_gear_details_array(details: @Array<GearDetails>) -> bool {
 pub fn generate_batch_gear_details(amount: u32) -> Array<GearDetails> {
     let mut result = array![];
     let mut i = 0;
-    
+
     while i < amount {
         result.append(random_gear_details());
         i += 1;
     };
-    
+
     result
 }
 
 // Tests for helper functions
 #[cfg(test)]
 mod tests {
-    use super::{GearDetailsImpl, GearType, random_gear_details, validate_gear_details_array, generate_batch_gear_details};
+    use super::{
+        GearDetailsImpl, GearType, random_gear_details, validate_gear_details_array,
+        generate_batch_gear_details,
+    };
 
     #[test]
     fn test_random_gear_details() {
@@ -236,7 +234,7 @@ mod tests {
     fn test_validate_gear_details_array() {
         let mut details = array![
             GearDetailsImpl::new(GearType::Sword, 30, 50, 10, 1, 1),
-            GearDetailsImpl::new(GearType::Helmet, 15, 0, 5, 1, 0)
+            GearDetailsImpl::new(GearType::Helmet, 15, 0, 5, 1, 0),
         ];
         assert(validate_gear_details_array(@details), 'Valid array should pass');
 
