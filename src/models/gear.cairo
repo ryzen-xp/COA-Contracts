@@ -474,7 +474,7 @@ pub struct MarketActivity {
     #[key]
     pub id: u8, // Always 0 for singleton
     pub activity_count: u256, // Number of upgrade attempts
-    pub last_reset_timestamp: u64
+    pub last_reset_timestamp: u64,
 }
 
 // Important Clone impl
