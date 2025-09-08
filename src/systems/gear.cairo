@@ -46,6 +46,15 @@ pub mod GearActions {
                     is_complete: false,
                 },
             );
+
+        // Seed market models
+        world.write_model(@MarketConditions { id: 0, cost_multiplier: 100 });
+        world
+            .write_model(
+                @MarketActivity {
+                    id: 0, activity_count: 0, last_reset_timestamp: get_block_timestamp(),
+                },
+            );
     }
 
 
@@ -92,10 +101,11 @@ pub mod GearActions {
             let new_stats: GearLevelStats = world.read_model((gear.asset_id, next_level));
             assert(new_stats.level == next_level, 'Next level stats not defined');
 
+            // Refresh market before pricing
+            self.update_market_conditions();
             let market_conditions: MarketConditions = world.read_model(0);
             let upgrade_cost = self.calculate_dynamic_upgrade_cost(gear, market_conditions);
             let success_rate = self.calculate_upgrade_success_rate(gear, player.level);
-
             assert(upgrade_cost.len() > 0, 'No upgrade path for item');
 
             let erc1155 = IERC1155Dispatcher { contract_address: materials_erc1155_address };
@@ -119,7 +129,7 @@ pub mod GearActions {
             // Increment market activity counter
             let mut market_activity: MarketActivity = world.read_model(0);
             market_activity.activity_count += 1;
-            world.write_model(@market_activity);
+            self.update_market_conditions();
 
             let tx_hash: felt252 = starknet::get_tx_info().unbox().transaction_hash;
             let seed: felt252 = tx_hash
@@ -615,8 +625,9 @@ pub mod GearActions {
         ) -> u8 {
             let world = self.world_default();
             let rarity = self.get_item_rarity(gear.asset_id);
+            let gear_type = parse_id(gear.asset_id);
             let success_rate: UpgradeSuccessRate = world
-                .read_model((gear.item_type, gear.upgrade_level));
+                .read_model((gear_type, gear.upgrade_level));
             let base_rate = success_rate.rate;
 
             let rarity_penalty = match rarity {
@@ -665,7 +676,8 @@ pub mod GearActions {
             self: @ContractState, gear: Gear, market_conditions: MarketConditions,
         ) -> Array<UpgradeMaterial> {
             let world = self.world_default();
-            let base_cost: UpgradeCost = world.read_model((gear.item_type, gear.upgrade_level));
+            let gear_type = parse_id(gear.asset_id);
+            let base_cost: UpgradeCost = world.read_model((gear_type, gear.upgrade_level));
             let rarity = self.get_item_rarity(gear.asset_id);
 
             let rarity_multiplier = match rarity {
@@ -684,8 +696,13 @@ pub mod GearActions {
                 let material = *base_cost.materials.at(i);
                 let final_amount = (material.amount * rarity_multiplier * market_multiplier)
                     / 10000;
-                final_costs
-                    .append(UpgradeMaterial { token_id: material.token_id, amount: final_amount });
+                // Only include materials with a non-zero final amount.
+                if final_amount > 0 {
+                    final_costs
+                        .append(
+                            UpgradeMaterial { token_id: material.token_id, amount: final_amount },
+                        );
+                }
                 i += 1;
             };
 

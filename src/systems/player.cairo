@@ -514,7 +514,7 @@ pub mod PlayerActions {
         ) -> u256 {
             let default_gear = Gear { // Create a default gear for melee
                 id: 0,
-                item_type: 0x1.try_into().unwrap(),
+                item_type: GearType::Weapon.into(),
                 asset_id: 0,
                 variation_ref: 0,
                 total_count: 1,
