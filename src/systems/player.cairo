@@ -36,7 +36,7 @@ pub mod PlayerActions {
         Player, PlayerTrait, DamageDealt, PlayerDamaged, FactionStats, PlayerInitialized,
         CombatSessionStarted, BatchDamageProcessed, CombatSessionEnded, DamageAccumulator,
     };
-    use crate::models::gear::{Gear, GearTrait};
+    use crate::models::gear::{Gear, GearTrait, GearLevelStats, ItemRarity, GearType};
     use crate::models::armour::{Armour, ArmourTrait};
     use crate::erc1155::erc1155::{IERC1155Dispatcher, IERC1155DispatcherTrait};
     use super::IPlayer;
@@ -48,6 +48,7 @@ pub mod PlayerActions {
     use crate::helpers::session_validation::{
         validate_combat_session, consume_combat_session_transactions,
     };
+    use crate::helpers::gear::parse_id;
 
     // Faction types as felt252 constants
     const CHAOS_MERCENARIES: felt252 = 'CHAOS_MERCENARIES';
@@ -507,20 +508,24 @@ pub mod PlayerActions {
                 }
             }
         }
+
         fn calculate_melee_damage(
             self: @ContractState, player: Player, faction_stats: FactionStats,
         ) -> u256 {
-            // Base weapon damage from player stats
-            let base_damage = 10 + (player.level / 100); // Simple Level scaling
-
-            // Apply faction damage multiplier
-            let faction_damage = (base_damage * faction_stats.damage_multiplier) / 100;
-
-            // Factor in player rank/level
-            let rank_multiplier = 100 + (player.rank.into() * 5); // 5% per rank
-            let final_damage = (faction_damage * rank_multiplier) / 100;
-
-            final_damage
+            let default_gear = Gear { // Create a default gear for melee
+                id: 0,
+                item_type: 0x1.try_into().unwrap(),
+                asset_id: 0,
+                variation_ref: 0,
+                total_count: 1,
+                in_action: true,
+                upgrade_level: 0,
+                owner: player.id,
+                max_upgrade_level: 1,
+                min_xp_needed: 0,
+                spawned: true,
+            };
+            self.calculate_balanced_damage(player, default_gear, faction_stats)
         }
 
         fn calculate_weapon_damage(
@@ -536,45 +541,21 @@ pub mod PlayerActions {
                 }
 
                 let item_id = *items.at(item_index);
-
-                // Get the item
                 let item: Gear = world.read_model(item_id);
 
-                // Check that item can deal damage
-                if !self.can_deal_damage(item.clone()) {
+                if !self.can_deal_damage(item.clone()) || !player.is_available(item.id) {
+                    item_index += 1;
                     continue;
                 }
 
-                // Check that item is equipped
-                if !player.is_available(item.id) {
-                    continue;
-                }
-
-                //
-                // Calculate item damage with upgrades
-                let base_item_damage = self.get_item_base_damage(item.item_type);
-                let upgraded_damage = if item.upgrade_level > 0 {
-                    item.output(item.upgrade_level)
-                } else {
-                    base_item_damage
-                };
-
-                // Apply weapon type damage multiplier
-                let weapon_multiplier = self.get_weapon_type_damage_multiplier(item.item_type);
-                let weapon_damage = (upgraded_damage * weapon_multiplier) / 100;
-
+                let weapon_damage = self.calculate_gear_damage(item);
                 total_damage += weapon_damage;
                 item_index += 1;
             };
 
-            // Apply faction damage multiplier
             let faction_damage = (total_damage * faction_stats.damage_multiplier) / 100;
-
-            // Factor in player XP and rank
-            let xp_bonus = (player.level / 50); // XP bonus
             let rank_multiplier = 100 + (player.rank.into() * 5);
-            let final_damage = ((faction_damage + xp_bonus) * rank_multiplier) / 100;
-
+            let final_damage = (faction_damage * rank_multiplier) / 100;
             final_damage
         }
 
@@ -851,9 +832,118 @@ pub mod PlayerActions {
 
             accumulator.accumulated_damage
         }
+
+        fn calculate_balanced_damage(
+            self: @ContractState, player: Player, gear: Gear, faction_stats: FactionStats,
+        ) -> u256 {
+            let level_damage = calculate_level_damage(player.level);
+            let gear_damage = self.calculate_gear_damage(gear);
+            let faction_damage = (level_damage + gear_damage)
+                * faction_stats.damage_multiplier
+                / 100;
+            let balanced_damage = apply_diminishing_returns(faction_damage, player.level);
+            balanced_damage
+        }
+
+        fn calculate_gear_damage(self: @ContractState, gear: Gear) -> u256 {
+            let world = self.world_default();
+            let rarity = self.get_item_rarity(gear.asset_id);
+            let base_damage = get_base_damage_for_type(parse_id(gear.asset_id));
+
+            let rarity_multiplier = match rarity {
+                ItemRarity::Common => 100,
+                ItemRarity::Uncommon => 120,
+                ItemRarity::Rare => 150,
+                ItemRarity::Epic => 200,
+                ItemRarity::Legendary => 300,
+            };
+
+            let upgrade_multiplier = 100 + (gear.upgrade_level * 10);
+            (base_damage * rarity_multiplier * upgrade_multiplier.into()) / 10000
+        }
+
+        fn get_item_rarity(self: @ContractState, asset_id: u256) -> ItemRarity {
+            let world = self.world_default();
+            let gear_stats: GearLevelStats = world.read_model((asset_id, 0));
+            if gear_stats.damage >= 100 {
+                ItemRarity::Legendary
+            } else if gear_stats.damage >= 75 {
+                ItemRarity::Epic
+            } else if gear_stats.damage >= 50 {
+                ItemRarity::Rare
+            } else if gear_stats.damage >= 25 {
+                ItemRarity::Uncommon
+            } else {
+                ItemRarity::Common
+            }
+        }
     }
 
     fn erc1155(contract_address: ContractAddress) -> IERC1155Dispatcher {
         IERC1155Dispatcher { contract_address }
+    }
+
+    fn get_base_damage_for_type(item_type: GearType) -> u256 {
+        match item_type {
+            GearType::None => 10,
+            GearType::Weapon => 20,
+            GearType::BluntWeapon => 22,
+            GearType::Sword => 25,
+            GearType::Bow => 15,
+            GearType::Firearm => 30,
+            GearType::Polearm => 22,
+            GearType::HeavyFirearms => 40,
+            GearType::Explosives => 50,
+            GearType::Helmet => 0,
+            GearType::ChestArmor => 0,
+            GearType::LegArmor => 0,
+            GearType::Boots => 0,
+            GearType::Gloves => 0,
+            GearType::Shield => 0,
+            GearType::Vehicle => 0,
+            GearType::Pet => 0,
+            GearType::Drone => 0,
+        }
+    }
+
+    fn calculate_level_damage(level: u256) -> u256 {
+        if level <= 10 {
+            level * 5
+        } else if level <= 50 {
+            50 + (level - 10) * 3
+        } else {
+            170 + (level - 50) * 1
+        }
+    }
+
+    fn apply_diminishing_returns(damage: u256, level: u256) -> u256 {
+        let multiplier = if level > 100 {
+            80 // 20% reduction for very high levels
+        } else if level > 50 {
+            90 // 10% reduction for mid-high levels
+        } else {
+            100 // No reduction for lower levels
+        };
+        (damage * multiplier) / 100
+    }
+
+    fn calculate_xp_requirement(current_level: u256) -> u256 {
+        if current_level <= 10 {
+            current_level * 1000
+        } else if current_level <= 50 {
+            10000 + (current_level - 10) * 2000
+        } else {
+            90000 + (current_level - 50) * 5000
+        }
+    }
+
+    fn calculate_level_from_xp(xp: u256) -> u256 {
+        if xp <= 10000 {
+            xp / 1000
+        } else if xp <= 90000 {
+            10 + (xp - 10000) / 2000
+        } else {
+            50 + (xp - 90000) / 5000
+        }
     }
 }

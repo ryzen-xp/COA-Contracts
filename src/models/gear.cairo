@@ -451,6 +451,32 @@ pub struct CombinedEquipmentEffects {
     pub set_bonuses: Array<(felt252, u64)> // (bonus_type, bonus_value)
 }
 
+#[derive(Drop, Copy, Serde, PartialEq)]
+pub enum ItemRarity {
+    Common, // 70% drop rate
+    Uncommon, // 20% drop rate
+    Rare, // 7% drop rate
+    Epic, // 2.5% drop rate
+    Legendary // 0.5% drop rate
+}
+
+#[dojo::model]
+#[derive(Drop, Copy, Serde)]
+pub struct MarketConditions {
+    #[key]
+    pub id: u8, // Always 0 for singleton
+    pub cost_multiplier: u256,
+}
+
+#[dojo::model]
+#[derive(Drop, Copy, Serde)]
+pub struct MarketActivity {
+    #[key]
+    pub id: u8, // Always 0 for singleton
+    pub activity_count: u256, // Number of upgrade attempts
+    pub last_reset_timestamp: u64
+}
+
 // Important Clone impl
 impl OptionUpgradeCostImpl of Clone<Option<UpgradeCost>> {
     fn clone(self: @Option<UpgradeCost>) -> Option<UpgradeCost> {

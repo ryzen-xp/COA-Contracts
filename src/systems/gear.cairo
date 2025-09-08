@@ -12,7 +12,8 @@ pub mod GearActions {
         Gear, GearProperties, GearType, UpgradeCost, UpgradeSuccessRate, UpgradeMaterial,
         GearLevelStats, UpgradeConfigState, GearDetailsComplete, GearStatsCalculated, UpgradeInfo,
         OwnershipStatus, GearFilters, OwnershipFilter, PaginationParams, SortParams, SortField,
-        PaginatedGearResult, CombinedEquipmentEffects, EquipmentSlotInfo,
+        PaginatedGearResult, CombinedEquipmentEffects, EquipmentSlotInfo, ItemRarity,
+        MarketConditions, MarketActivity,
     };
 
     use crate::models::weapon_stats::WeaponStats;
@@ -82,35 +83,28 @@ pub mod GearActions {
             let mut world = self.world_default();
             let caller = get_caller_address();
             let mut gear: Gear = world.read_model(item_id);
+            let player: Player = world.read_model(caller);
 
-            // Validation Rules
             assert(gear.owner == caller, 'Caller is not owner');
             assert(gear.upgrade_level < gear.max_upgrade_level, 'Gear at max level');
 
             let next_level = gear.upgrade_level + 1;
-            let gear_type: GearType = gear.item_type.try_into().expect('Invalid gear type');
-
-            // Assert that the stats for the next level are defined before proceeding.
-            // This prevents players from losing materials on an impossible upgrade.
             let new_stats: GearLevelStats = world.read_model((gear.asset_id, next_level));
-            // Ensure the exact next-level record exists
             assert(new_stats.level == next_level, 'Next level stats not defined');
-            let upgrade_cost: UpgradeCost = world.read_model((gear_type, gear.upgrade_level));
-            let success_rate: UpgradeSuccessRate = world
-                .read_model((gear_type, gear.upgrade_level));
 
-            assert(upgrade_cost.materials.len() > 0, 'No upgrade path for item');
+            let market_conditions: MarketConditions = world.read_model(0);
+            let upgrade_cost = self.calculate_dynamic_upgrade_cost(gear, market_conditions);
+            let success_rate = self.calculate_upgrade_success_rate(gear, player.level);
 
-            // Material Consumption
+            assert(upgrade_cost.len() > 0, 'No upgrade path for item');
+
             let erc1155 = IERC1155Dispatcher { contract_address: materials_erc1155_address };
-            let mut materials = upgrade_cost.materials;
             let mut i = 0;
-            while i != materials.len() {
-                let material = *materials.at(i);
+            while i < upgrade_cost.len() {
+                let material = *upgrade_cost.at(i);
                 let balance = erc1155.balance_of(caller, material.token_id);
                 assert(balance >= material.amount, 'Insufficient materials');
 
-                // Consume materials on attempt
                 erc1155
                     .safe_transfer_from(
                         caller,
@@ -122,7 +116,11 @@ pub mod GearActions {
                 i += 1;
             };
 
-            // Probability System using seeded dice with on-chain entropy
+            // Increment market activity counter
+            let mut market_activity: MarketActivity = world.read_model(0);
+            market_activity.activity_count += 1;
+            world.write_model(@market_activity);
+
             let tx_hash: felt252 = starknet::get_tx_info().unbox().transaction_hash;
             let seed: felt252 = tx_hash
                 + caller.into()
@@ -131,34 +129,26 @@ pub mod GearActions {
             let mut dice = DiceTrait::new(100, seed);
             let pseudo_random: u8 = dice.roll();
 
-            if pseudo_random < success_rate.rate.into() {
-                // Successful Upgrade
+            if pseudo_random < success_rate {
                 gear.upgrade_level = next_level;
-
-                // By incrementing the level, the gear now implicitly uses the `new_stats`
-                // we've already confirmed exist. No further action is needed to "apply" them
-                // in this ECS architecture.
-
                 world.write_model(@gear);
-
                 world
                     .emit_event(
                         @UpgradeSuccess {
                             player_id: caller,
                             gear_id: item_id,
                             new_level: gear.upgrade_level,
-                            materials_consumed: materials.span(),
+                            materials_consumed: upgrade_cost.span(),
                         },
                     );
             } else {
-                // Failed Upgrade (materials are still consumed)
                 world
                     .emit_event(
                         @UpgradeFailed {
                             player_id: caller,
                             gear_id: item_id,
                             level: gear.upgrade_level,
-                            materials_consumed: materials.span(),
+                            materials_consumed: upgrade_cost.span(),
                         },
                     );
             }
@@ -618,6 +608,132 @@ pub mod GearActions {
     pub impl GearInternalImpl of GearInternalTrait {
         fn world_default(self: @ContractState) -> WorldStorage {
             self.world(@"coa")
+        }
+
+        fn calculate_upgrade_success_rate(
+            self: @ContractState, gear: Gear, player_level: u256,
+        ) -> u8 {
+            let world = self.world_default();
+            let rarity = self.get_item_rarity(gear.asset_id);
+            let success_rate: UpgradeSuccessRate = world
+                .read_model((gear.item_type, gear.upgrade_level));
+            let base_rate = success_rate.rate;
+
+            let rarity_penalty = match rarity {
+                ItemRarity::Common => 0,
+                ItemRarity::Uncommon => 5,
+                ItemRarity::Rare => 10,
+                ItemRarity::Epic => 15,
+                ItemRarity::Legendary => 20,
+            };
+
+            let level_bonus = if player_level >= 50 {
+                10
+            } else if player_level >= 25 {
+                5
+            } else {
+                0
+            };
+
+            let final_rate = base_rate - rarity_penalty + level_bonus;
+            if final_rate > 95 {
+                95
+            } else if final_rate < 5 {
+                5
+            } else {
+                final_rate
+            }
+        }
+
+        fn get_item_rarity(self: @ContractState, asset_id: u256) -> ItemRarity {
+            let world = self.world_default();
+            let gear_stats: GearLevelStats = world.read_model((asset_id, 0));
+            if gear_stats.damage >= 100 {
+                ItemRarity::Legendary
+            } else if gear_stats.damage >= 75 {
+                ItemRarity::Epic
+            } else if gear_stats.damage >= 50 {
+                ItemRarity::Rare
+            } else if gear_stats.damage >= 25 {
+                ItemRarity::Uncommon
+            } else {
+                ItemRarity::Common
+            }
+        }
+
+        fn calculate_dynamic_upgrade_cost(
+            self: @ContractState, gear: Gear, market_conditions: MarketConditions,
+        ) -> Array<UpgradeMaterial> {
+            let world = self.world_default();
+            let base_cost: UpgradeCost = world.read_model((gear.item_type, gear.upgrade_level));
+            let rarity = self.get_item_rarity(gear.asset_id);
+
+            let rarity_multiplier = match rarity {
+                ItemRarity::Common => 100,
+                ItemRarity::Uncommon => 150,
+                ItemRarity::Rare => 250,
+                ItemRarity::Epic => 400,
+                ItemRarity::Legendary => 600,
+            };
+
+            let market_multiplier = market_conditions.cost_multiplier;
+
+            let mut final_costs = array![];
+            let mut i = 0;
+            while i < base_cost.materials.len() {
+                let material = *base_cost.materials.at(i);
+                let final_amount = (material.amount * rarity_multiplier * market_multiplier)
+                    / 10000;
+                final_costs
+                    .append(UpgradeMaterial { token_id: material.token_id, amount: final_amount });
+                i += 1;
+            };
+
+            final_costs
+        }
+
+        fn update_market_conditions(ref self: ContractState) {
+            let mut world = self.world_default();
+            let mut market: MarketConditions = world.read_model(0);
+
+            let recent_activity = self.get_recent_market_activity();
+            let target_activity = 1000;
+
+            if recent_activity > target_activity * 120 / 100 {
+                market.cost_multiplier = market.cost_multiplier * 105 / 100;
+            } else if recent_activity < target_activity * 80 / 100 {
+                market.cost_multiplier = market.cost_multiplier * 95 / 100;
+            }
+
+            if market.cost_multiplier > 200 {
+                market.cost_multiplier = 200;
+            }
+            if market.cost_multiplier < 50 {
+                market.cost_multiplier = 50;
+            }
+
+            world.write_model(@market);
+        }
+
+        fn get_recent_market_activity(self: @ContractState) -> u256 {
+            let mut world = self.world_default();
+            let current_timestamp = get_block_timestamp();
+            let time_window: u64 = 86400; // 24 hours in seconds
+            let mut market_activity: MarketActivity = world.read_model(0);
+
+            // Check if the activity counter needs to be reset
+            if current_timestamp >= market_activity.last_reset_timestamp + time_window {
+                market_activity.activity_count = 0;
+                market_activity.last_reset_timestamp = current_timestamp;
+                world.write_model(@market_activity);
+            }
+
+            // Return scaled activity count or default if zero
+            if market_activity.activity_count == 0 {
+                1000 // Default value if no activity
+            } else {
+                market_activity.activity_count * 100 // Scale for balance
+            }
         }
 
         fn _assert_admin(self: @ContractState) { // assert the admin here.
