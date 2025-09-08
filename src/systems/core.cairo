@@ -3,10 +3,10 @@
 ///
 /// Spawn tournamemnts and side quests here, if necessary.
 
-use coa::models::gear::Gear;
+use coa::models::gear::{Gear, GearDetails};
 #[starknet::interface]
 pub trait ICore<TContractState> {
-    fn spawn_items(ref self: TContractState, amount: u256);
+    fn spawn_items(ref self: TContractState, gear_details: Array<GearDetails>);
     // move to market only items that have been spawned.
     // if caller is admin, check spawned items and relocate
     // if caller is player,
@@ -74,8 +74,8 @@ pub mod CoreActions {
 
     #[abi(embed_v0)]
     pub impl CoreActionsImpl of super::ICore<ContractState> {
-        //@ryzen-xp
-        fn spawn_items(ref self: ContractState, mut amount: u256) {
+        //@ryzen-xp, @truthixify
+        fn spawn_items(ref self: ContractState, gear_details: Array<GearDetails>) {
             let caller = get_caller_address();
             let mut world = self.world_default();
             let contract: Contract = world.read_model(COA_CONTRACTS);
@@ -86,23 +86,43 @@ pub mod CoreActions {
             };
 
             let mut items = array![];
+            let mut i = 0;
 
-            while amount != 0 {
-                let mut gear: Gear = self.random_gear_generator();
+            while i < gear_details.len() {
+                let details = *gear_details.at(i);
+                assert(details.validate(), 'Invalid gear details');
 
-                assert(!gear.spawned, 'Gear_already_spawned');
+                let item_id: u256 = self.generate_incremental_ids(details.gear_type.into());
+                let item_type: felt252 = details.gear_type.into();
+
+                let mut gear = Gear {
+                    id: item_id,
+                    item_type,
+                    asset_id: item_id,
+                    variation_ref: details.variation_ref,
+                    total_count: details.total_count,
+                    in_action: false,
+                    upgrade_level: 0,
+                    owner: contract_address_const::<0>(),
+                    max_upgrade_level: details.max_upgrade_level,
+                    min_xp_needed: details.min_xp_needed,
+                    spawned: false,
+                };
+
+                assert(!gear.spawned, 'Gear already spawned');
                 gear.spawned = true;
-                gear.owner = contract_address_const::<0>();
                 world.write_model(@gear);
 
                 items.append(gear.id);
-                amount -= 1;
-                // mint to warehouse
-                erc1155_dispatcher.mint(contract.warehouse, gear.id, 1, array![].span());
+                erc1155_dispatcher
+                    .mint(contract.warehouse, gear.id, details.total_count.into(), array![].span());
+                i += 1;
             };
+
             let event = GearSpawned { admin: caller, items };
             world.emit_event(@event);
         }
+
         // move to market only items that have been spawned.
         // if caller is admin, check spawned items and relocate
         // if caller is player,

@@ -1,4 +1,4 @@
-use crate::models::gear::GearType;
+use crate::models::gear::{GearType, GearDetails, GearDetailsImpl};
 use origami_random::dice::{Dice, DiceTrait};
 
 // Helper function to calculate upgrade multipliers based on level
@@ -167,3 +167,91 @@ pub fn get_min_xp_needed(gear_type: GearType) -> u256 {
     }
 }
 
+// Helper function to generate random GearDetails
+pub fn random_gear_details() -> GearDetails {
+    let mut gear_type = random_geartype();
+
+    if gear_type == GearType::None {
+        // Fallback to a sane default; alternatively re-roll with a different seed.
+        gear_type = GearType::Weapon;
+    }
+
+    let min_xp_needed = get_min_xp_needed(gear_type);
+    let max_upgrade_level = get_max_upgrade_level(gear_type);
+
+    // Generate random base damage (between 10 and 100 for simplicity)
+    let mut dice = DiceTrait::new(90, 'DAMAGE_SEED');
+    let base_damage: u64 = (10 + dice.roll()).into();
+
+    GearDetails {
+        gear_type, min_xp_needed, base_damage, max_upgrade_level, total_count: 1, variation_ref: 0,
+    }
+}
+
+// Helper function to validate GearDetails array
+pub fn validate_gear_details_array(details: @Array<GearDetails>) -> bool {
+    let mut i = 0;
+    let mut valid = true;
+
+    while i < details.len() {
+        let gear_details = *details.at(i);
+        if !gear_details.validate() {
+            valid = false;
+            break;
+        }
+        i += 1;
+    };
+
+    valid
+}
+
+// Helper function to generate multiple GearDetails for batch spawning
+pub fn generate_batch_gear_details(amount: u32) -> Array<GearDetails> {
+    let mut result = array![];
+    let mut i = 0;
+
+    while i < amount {
+        result.append(random_gear_details());
+        i += 1;
+    };
+
+    result
+}
+
+// Tests for helper functions
+#[cfg(test)]
+mod tests {
+    use super::{
+        GearDetailsImpl, GearType, random_gear_details, validate_gear_details_array,
+        generate_batch_gear_details,
+    };
+
+    #[test]
+    fn test_random_gear_details() {
+        let gear = random_gear_details();
+        assert(gear.validate(), 'Random gear should be valid');
+        assert(gear.gear_type != GearType::None, 'Gear type should not be None');
+        assert(gear.base_damage >= 10 && gear.base_damage <= 100, 'Base damage out of range');
+        assert(gear.total_count == 1, 'Total count should be 1');
+    }
+
+    #[test]
+    #[should_panic(expected: 'Gear type cannot be None')]
+    fn test_validate_gear_details_array() {
+        let mut details = array![
+            GearDetailsImpl::new(GearType::Sword, 30, 50, 10, 1, 1),
+            GearDetailsImpl::new(GearType::Helmet, 15, 0, 5, 1, 0),
+        ];
+        assert(validate_gear_details_array(@details), 'Valid array should pass');
+
+        // Add invalid gear details
+        details.append(GearDetailsImpl::new(GearType::None, 5, 10, 1, 1, 0));
+    }
+
+    #[test]
+    fn test_generate_batch_gear_details() {
+        let details = generate_batch_gear_details(3);
+        assert(details.len() == 3, 'Should generate 3 gear details');
+        assert(validate_gear_details_array(@details), 'Batch should be valid');
+    }
+}
